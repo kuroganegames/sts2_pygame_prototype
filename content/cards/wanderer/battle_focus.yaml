@@ -1,0 +1,27 @@
+schema_version: 1
+id: battle_focus
+name: 戦闘集中
+image: battle_focus.png
+character: wanderer
+type: skill
+rarity: rare
+cost: 1
+target: self
+description: 筋力を2得る。カードを1枚引く。
+effects:
+  - type: apply_status
+    target: self
+    status: strength
+    stacks: 2
+  - type: draw_cards
+    amount: 1
+upgrade:
+  name: 戦闘集中+
+  description: 筋力を3得る。カードを1枚引く。
+  effects:
+    - type: apply_status
+      target: self
+      status: strength
+      stacks: 3
+    - type: draw_cards
+      amount: 1

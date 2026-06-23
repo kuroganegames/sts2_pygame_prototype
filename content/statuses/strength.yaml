@@ -1,0 +1,6 @@
+schema_version: 1
+id: strength
+name: 筋力
+type: buff
+stacking: amount
+description: 攻撃ダメージがスタック分増える。

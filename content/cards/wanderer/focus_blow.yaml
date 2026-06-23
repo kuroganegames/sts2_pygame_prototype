@@ -1,0 +1,21 @@
+schema_version: 1
+id: focus_blow
+name: 集中打
+image: focus_blow.png
+character: wanderer
+type: attack
+rarity: common
+cost: 2
+target: enemy
+description: 14ダメージを与える。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 14
+upgrade:
+  name: 集中打+
+  description: 18ダメージを与える。
+  effects:
+    - type: damage
+      target: selected_enemy
+      amount: 18

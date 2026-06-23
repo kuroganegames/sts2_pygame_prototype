@@ -1,0 +1,22 @@
+schema_version: 1
+id: strange_fountain
+name: 奇妙な泉
+image: strange_fountain.png
+act_pool: [1]
+description: 青白く光る泉がある。水面には、あなたのデッキと傷が映っている。
+choices:
+  - id: drink
+    text: 水を飲む。HPを20%回復する。
+    effects:
+      - type: heal
+        amount:
+          type: percent_max_hp
+          percent: 20
+  - id: coin
+    text: 底の硬貨を拾う。30ゴールドを得る。
+    effects:
+      - type: gain_gold
+        amount: 30
+  - id: leave
+    text: 立ち去る。
+    effects: []

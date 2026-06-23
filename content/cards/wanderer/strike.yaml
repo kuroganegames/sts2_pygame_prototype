@@ -1,0 +1,21 @@
+schema_version: 1
+id: strike
+name: ストライク
+image: strike.png
+character: wanderer
+type: attack
+rarity: basic
+cost: 1
+target: enemy
+description: 6ダメージを与える。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 6
+upgrade:
+  name: ストライク+
+  description: 9ダメージを与える。
+  effects:
+    - type: damage
+      target: selected_enemy
+      amount: 9

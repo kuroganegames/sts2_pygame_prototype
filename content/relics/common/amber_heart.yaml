@@ -1,0 +1,13 @@
+schema_version: 1
+id: amber_heart
+name: 琥珀の心臓
+image: amber_heart.png
+rarity: common
+unique: true
+description: 各ターン開始時、1ブロックを得る。
+triggers:
+  - event: turn_start
+    effects:
+      - type: gain_block
+        target: self
+        amount: 1

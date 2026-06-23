@@ -1,0 +1,19 @@
+schema_version: 1
+id: forgotten_armory
+name: 忘れられた武器庫
+image: forgotten_armory.png
+act_pool: [1]
+description: 朽ちた武器が並んでいる。まだ使えそうなものもある。
+choices:
+  - id: train
+    text: 訓練する。ランダムなカードを1枚強化する。
+    effects:
+      - type: upgrade_random_card
+  - id: take_blade
+    text: 刃を持ち出す。二連斬りを得る。
+    effects:
+      - type: add_card_to_deck
+        card: double_cut
+  - id: leave
+    text: 触らずに進む。
+    effects: []

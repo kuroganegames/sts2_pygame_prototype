@@ -1,0 +1,12 @@
+schema_version: 1
+id: blue_thread
+name: 青い糸
+image: blue_thread.png
+rarity: rare
+unique: true
+description: 各ターン開始時、カードを1枚追加で引く。
+triggers:
+  - event: turn_start
+    effects:
+      - type: draw_cards
+        amount: 1

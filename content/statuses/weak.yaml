@@ -1,0 +1,6 @@
+schema_version: 1
+id: weak
+name: 弱体
+type: debuff
+stacking: duration
+description: 与えるダメージが25%減る。ターン終了時に1減る。

@@ -1,0 +1,14 @@
+schema_version: 1
+id: iron_leaf
+name: 鉄の葉
+image: iron_leaf.png
+rarity: uncommon
+unique: true
+description: 戦闘開始時、筋力を1得る。
+triggers:
+  - event: combat_start
+    effects:
+      - type: apply_status
+        target: self
+        status: strength
+        stacks: 1

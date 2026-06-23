@@ -1,0 +1,11 @@
+schema_version: 1
+id: wound
+name: 負傷
+image: wound.png
+character: neutral
+type: status
+rarity: special
+cost: 0
+target: none
+description: 何もしない。戦闘終了時に消える。
+effects: []

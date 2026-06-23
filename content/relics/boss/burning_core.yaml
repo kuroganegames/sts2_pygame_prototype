@@ -1,0 +1,8 @@
+schema_version: 1
+id: burning_core
+name: 燃える核
+image: burning_core.png
+rarity: boss
+unique: true
+description: 最大HPが上がる強力なボス級レリック。現在は報酬表示用。
+triggers: []

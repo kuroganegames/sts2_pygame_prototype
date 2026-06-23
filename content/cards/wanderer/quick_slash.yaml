@@ -1,0 +1,25 @@
+schema_version: 1
+id: quick_slash
+name: クイックスラッシュ
+image: quick_slash.png
+character: wanderer
+type: attack
+rarity: common
+cost: 1
+target: enemy
+description: 5ダメージを与える。カードを1枚引く。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 5
+  - type: draw_cards
+    amount: 1
+upgrade:
+  name: クイックスラッシュ+
+  description: 8ダメージを与える。カードを1枚引く。
+  effects:
+    - type: damage
+      target: selected_enemy
+      amount: 8
+    - type: draw_cards
+      amount: 1

@@ -1,0 +1,19 @@
+schema_version: 1
+id: preparation
+name: 準備運動
+image: preparation.png
+character: wanderer
+type: skill
+rarity: uncommon
+cost: 0
+target: self
+description: カードを2枚引く。
+effects:
+  - type: draw_cards
+    amount: 2
+upgrade:
+  name: 準備運動+
+  description: カードを3枚引く。
+  effects:
+    - type: draw_cards
+      amount: 3
