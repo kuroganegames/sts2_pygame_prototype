@@ -1,0 +1,72 @@
+schema_version: 1
+id: act1
+name: 第1層
+layers: 15
+layout:
+  min_nodes_per_layer: 2
+  max_nodes_per_layer: 5
+  start_nodes: 3
+  boss_nodes: 1
+edges:
+  max_outgoing_per_node: 3
+  max_incoming_per_node: 3
+  allow_crossing_edges: false
+  ensure_path_to_boss: true
+fixed_layers:
+  1:
+    allowed:
+      monster: 100
+  8:
+    allowed:
+      treasure: 60
+      monster: 40
+  14:
+    allowed:
+      rest: 100
+  15:
+    allowed:
+      boss: 100
+weights_by_depth:
+  early:
+    layers: [2, 3, 4, 5]
+    weights:
+      monster: 70
+      event: 20
+      shop: 5
+      treasure: 5
+      elite: 0
+      rest: 0
+  mid:
+    layers: [6, 7, 8, 9, 10, 11]
+    weights:
+      monster: 40
+      event: 25
+      elite: 15
+      shop: 10
+      treasure: 5
+      rest: 5
+  late:
+    layers: [12, 13]
+    weights:
+      monster: 35
+      event: 20
+      elite: 15
+      shop: 10
+      treasure: 5
+      rest: 15
+constraints:
+  no_same_type_consecutive: [shop, rest, treasure]
+  max_elites_per_path: 3
+  min_monsters_before_elite: 2
+  rest_before_boss: true
+encounter_pools:
+  monster:
+    - [slime_small]
+    - [cultist]
+    - [fungi_beast]
+    - [slime_small, slime_small]
+    - [slime_small, fungi_beast]
+  elite:
+    - [elite_guard]
+  boss:
+    - [stone_guardian]

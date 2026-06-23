@@ -1,0 +1,30 @@
+schema_version: 1
+id: slime_small
+name: 小さなスライム
+image: slime_small.png
+type: normal
+act: 1
+hp:
+  min: 12
+  max: 16
+moves:
+  tackle:
+    name: 体当たり
+    intent: attack
+    weight: 65
+    effects:
+      - type: damage
+        target: player
+        amount: 5
+  spit:
+    name: 粘液吐き
+    intent: debuff
+    weight: 35
+    effects:
+      - type: apply_status
+        target: player
+        status: weak
+        stacks: 1
+ai:
+  type: weighted_random
+  avoid_same_move_twice: true

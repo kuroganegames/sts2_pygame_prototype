@@ -1,0 +1,21 @@
+schema_version: 1
+id: fortify
+name: 身構え
+image: fortify.png
+character: wanderer
+type: skill
+rarity: common
+cost: 1
+target: self
+description: 7ブロックを得る。
+effects:
+  - type: gain_block
+    target: self
+    amount: 7
+upgrade:
+  name: 身構え+
+  description: 10ブロックを得る。
+  effects:
+    - type: gain_block
+      target: self
+      amount: 10

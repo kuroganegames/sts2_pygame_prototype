@@ -1,0 +1,12 @@
+schema_version: 1
+id: old_charm
+name: 古びたお守り
+image: old_charm.png
+rarity: starter
+unique: true
+description: 戦闘開始時、カードを1枚追加で引く。
+triggers:
+  - event: combat_start
+    effects:
+      - type: draw_cards
+        amount: 1

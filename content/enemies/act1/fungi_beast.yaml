@@ -1,0 +1,30 @@
+schema_version: 1
+id: fungi_beast
+name: 胞子獣
+image: fungi_beast.png
+type: normal
+act: 1
+hp:
+  min: 24
+  max: 30
+moves:
+  bite:
+    name: 噛みつき
+    intent: attack
+    weight: 60
+    effects:
+      - type: damage
+        target: player
+        amount: 6
+  spores:
+    name: 胞子
+    intent: debuff
+    weight: 40
+    effects:
+      - type: apply_status
+        target: player
+        status: vulnerable
+        stacks: 1
+ai:
+  type: weighted_random
+  avoid_same_move_twice: false

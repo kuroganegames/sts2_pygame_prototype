@@ -1,0 +1,29 @@
+schema_version: 1
+id: weaken_blow
+name: 脱力打ち
+image: weaken_blow.png
+character: wanderer
+type: attack
+rarity: uncommon
+cost: 1
+target: enemy
+description: 6ダメージを与える。弱体を2付与。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 6
+  - type: apply_status
+    target: selected_enemy
+    status: weak
+    stacks: 2
+upgrade:
+  name: 脱力打ち+
+  description: 8ダメージを与える。弱体を3付与。
+  effects:
+    - type: damage
+      target: selected_enemy
+      amount: 8
+    - type: apply_status
+      target: selected_enemy
+      status: weak
+      stacks: 3

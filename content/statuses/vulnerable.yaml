@@ -1,0 +1,6 @@
+schema_version: 1
+id: vulnerable
+name: 脆弱
+type: debuff
+stacking: duration
+description: 受けるダメージが50%増える。ターン終了時に1減る。

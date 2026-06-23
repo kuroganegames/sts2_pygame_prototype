@@ -1,0 +1,21 @@
+schema_version: 1
+id: wide_swing
+name: 薙ぎ払い
+image: wide_swing.png
+character: wanderer
+type: attack
+rarity: uncommon
+cost: 1
+target: enemy
+description: 敵全体に5ダメージを与える。
+effects:
+  - type: damage
+    target: all_enemies
+    amount: 5
+upgrade:
+  name: 薙ぎ払い+
+  description: 敵全体に8ダメージを与える。
+  effects:
+    - type: damage
+      target: all_enemies
+      amount: 8

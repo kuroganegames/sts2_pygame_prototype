@@ -1,0 +1,29 @@
+schema_version: 1
+id: wanderer
+name: 旅人
+image: wanderer.png
+max_hp: 72
+starting_hp: 72
+starting_gold: 99
+base_energy: 3
+starting_potion_slots: 3
+starting_deck:
+  - strike
+  - strike
+  - strike
+  - strike
+  - guard
+  - guard
+  - guard
+  - guard
+  - quick_slash
+  - focus_blow
+starting_relics:
+  - old_charm
+card_pools:
+  character: wanderer
+  neutral: true
+tags:
+  - starter
+  - balanced
+description: 攻防とドローのバランスに優れた基本キャラクター。

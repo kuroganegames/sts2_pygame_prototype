@@ -1,0 +1,27 @@
+schema_version: 1
+id: double_cut
+name: 二連斬り
+image: double_cut.png
+character: wanderer
+type: attack
+rarity: uncommon
+cost: 1
+target: enemy
+description: 4ダメージを2回与える。
+effects:
+  - type: repeat
+    times: 2
+    effects:
+      - type: damage
+        target: selected_enemy
+        amount: 4
+upgrade:
+  name: 二連斬り+
+  description: 6ダメージを2回与える。
+  effects:
+    - type: repeat
+      times: 2
+      effects:
+        - type: damage
+          target: selected_enemy
+          amount: 6

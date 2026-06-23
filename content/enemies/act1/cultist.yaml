@@ -1,0 +1,33 @@
+schema_version: 1
+id: cultist
+name: 叫ぶ信徒
+image: cultist.png
+type: normal
+act: 1
+hp:
+  min: 36
+  max: 42
+moves:
+  chant:
+    name: 詠唱
+    intent: buff
+    weight: 30
+    effects:
+      - type: apply_status
+        target: self
+        status: strength
+        stacks: 2
+  strike:
+    name: 儀式短剣
+    intent: attack
+    weight: 70
+    effects:
+      - type: damage
+        target: player
+        amount: 7
+ai:
+  type: pattern
+  pattern:
+    - chant
+    - strike
+    - strike

@@ -1,0 +1,42 @@
+schema_version: 1
+id: elite_guard
+name: 古代の番人
+image: elite_guard.png
+type: elite
+act: 1
+hp:
+  min: 78
+  max: 86
+moves:
+  guard:
+    name: 防御姿勢
+    intent: defend
+    effects:
+      - type: gain_block
+        target: self
+        amount: 12
+  slam:
+    name: 強打
+    intent: attack
+    effects:
+      - type: damage
+        target: player
+        amount: 15
+  pressure:
+    name: 圧迫
+    intent: attack_debuff
+    effects:
+      - type: damage
+        target: player
+        amount: 8
+      - type: apply_status
+        target: player
+        status: vulnerable
+        stacks: 1
+ai:
+  type: pattern
+  pattern:
+    - guard
+    - slam
+    - pressure
+    - slam

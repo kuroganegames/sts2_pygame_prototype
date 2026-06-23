@@ -1,0 +1,6 @@
+schema_version: 1
+id: poison
+name: 毒
+type: debuff
+stacking: amount
+description: ターン終了時にスタック分HPを失い、1減る。

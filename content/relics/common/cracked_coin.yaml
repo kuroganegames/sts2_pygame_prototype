@@ -1,0 +1,11 @@
+schema_version: 1
+id: cracked_coin
+name: 割れた金貨
+image: cracked_coin.png
+rarity: common
+unique: true
+description: 戦闘終了時、追加で5ゴールドを得る。
+triggers:
+  - event: combat_end
+    effects:
+      - type: none

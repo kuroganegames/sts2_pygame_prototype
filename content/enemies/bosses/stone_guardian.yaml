@@ -1,0 +1,41 @@
+schema_version: 1
+id: stone_guardian
+name: 石の守護者
+image: stone_guardian.png
+type: boss
+act: 1
+hp:
+  min: 160
+  max: 160
+moves:
+  fortify:
+    name: 要塞化
+    intent: defend
+    effects:
+      - type: gain_block
+        target: self
+        amount: 18
+  heavy_slam:
+    name: 大地割り
+    intent: attack
+    effects:
+      - type: damage
+        target: player
+        amount: 18
+  quake:
+    name: 地震
+    intent: attack_debuff
+    effects:
+      - type: damage
+        target: player
+        amount: 12
+      - type: add_card_to_draw_pile
+        card: dazed
+        amount: 2
+ai:
+  type: pattern
+  pattern:
+    - fortify
+    - heavy_slam
+    - quake
+    - heavy_slam

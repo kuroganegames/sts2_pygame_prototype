@@ -1,0 +1,21 @@
+schema_version: 1
+id: guard
+name: ガード
+image: guard.png
+character: wanderer
+type: skill
+rarity: basic
+cost: 1
+target: self
+description: 5ブロックを得る。
+effects:
+  - type: gain_block
+    target: self
+    amount: 5
+upgrade:
+  name: ガード+
+  description: 8ブロックを得る。
+  effects:
+    - type: gain_block
+      target: self
+      amount: 8
