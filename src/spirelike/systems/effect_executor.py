@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from spirelike.models.entities import CardInstance, EnemyInstance, PlayerState
+from spirelike.systems.actions import (
+    AddCardToPileAction,
+    ApplyStatusAction,
+    DamageAction,
+    DrawCardsAction,
+    GainBlockAction,
+    GainEnergyAction,
+    HealAction,
+)
 
 
 class EffectExecutor:
@@ -12,7 +20,7 @@ class EffectExecutor:
     def execute_many(self, effects: list[dict[str, Any]], context: dict[str, Any]) -> None:
         for effect in effects or []:
             self.execute(effect, context)
-            if self.combat.state.outcome is not None:
+            if self.combat.state.outcome == "defeat":
                 break
 
     def execute(self, effect: dict[str, Any], context: dict[str, Any]) -> None:
@@ -23,17 +31,15 @@ class EffectExecutor:
             self._gain_block(effect, context)
         elif effect_type == "draw_cards":
             amount = self.resolve_amount(effect.get("amount", 1), context)
-            self.combat.draw_cards(amount)
+            self.combat.enqueue_action(DrawCardsAction(amount))
         elif effect_type == "gain_energy":
             amount = self.resolve_amount(effect.get("amount", 1), context)
-            self.combat.state.energy += amount
-            self.combat.log(f"エナジー +{amount}")
+            self.combat.enqueue_action(GainEnergyAction(amount))
         elif effect_type == "apply_status":
             self._apply_status(effect, context)
         elif effect_type == "heal":
             amount = self.resolve_amount(effect.get("amount", 0), context)
-            healed = self.combat.state.run_state.player.heal(amount)
-            self.combat.log(f"HPを{healed}回復")
+            self.combat.enqueue_action(HealAction(amount))
         elif effect_type == "add_card_to_draw_pile":
             self._add_card_to_pile(effect, context, "draw")
         elif effect_type == "add_card_to_hand":
@@ -54,33 +60,32 @@ class EffectExecutor:
         amount = self.resolve_amount(effect.get("amount", 0), context)
         targets = self.resolve_targets(effect.get("target", "selected_enemy"), context)
         for target in targets:
-            self.combat.deal_damage(context.get("source"), target, amount, context.get("card_def"))
+            self.combat.enqueue_action(
+                DamageAction(
+                    source=context.get("source"),
+                    target=target,
+                    amount=amount,
+                    card_def=context.get("card_def", {}),
+                )
+            )
 
     def _gain_block(self, effect: dict[str, Any], context: dict[str, Any]) -> None:
         amount = self.resolve_amount(effect.get("amount", 0), context)
         targets = self.resolve_targets(effect.get("target", "self"), context)
         for target in targets:
-            target.block += amount
-            name = getattr(target, "name", "プレイヤー")
-            self.combat.log(f"{name}: ブロック +{amount}")
+            self.combat.enqueue_action(GainBlockAction(target=target, amount=amount))
 
     def _apply_status(self, effect: dict[str, Any], context: dict[str, Any]) -> None:
         status_id = effect.get("status")
         stacks = self.resolve_amount(effect.get("stacks", 1), context)
         targets = self.resolve_targets(effect.get("target", "selected_enemy"), context)
         for target in targets:
-            self.combat.apply_status(target, str(status_id), stacks)
+            self.combat.enqueue_action(ApplyStatusAction(target=target, status_id=str(status_id), stacks=stacks))
 
     def _add_card_to_pile(self, effect: dict[str, Any], context: dict[str, Any], pile: str) -> None:
         card_id = str(effect.get("card"))
         amount = self.resolve_amount(effect.get("amount", 1), context)
-        for _ in range(max(0, amount)):
-            card = CardInstance(card_id=card_id, temporary=True)
-            if pile == "hand":
-                self.combat.add_to_hand(card)
-            else:
-                self.combat.state.draw_pile.append(card)
-        self.combat.log(f"{card_id} を{amount}枚追加")
+        self.combat.enqueue_action(AddCardToPileAction(card_id=card_id, amount=amount, pile=pile))
 
     def resolve_targets(self, target_spec: str, context: dict[str, Any]) -> list[Any]:
         player = self.combat.state.run_state.player
@@ -122,6 +127,12 @@ class EffectExecutor:
             if value_type == "status_stacks":
                 target = self._amount_target(value, context)
                 return int(getattr(target, "statuses", {}).get(value.get("status"), 0))
+            if value_type == "power_stacks":
+                power_id = value.get("power")
+                if power_id:
+                    return self.combat.power_system.power_stacks(self.combat, str(power_id))
+                power = context.get("power")
+                return int(getattr(power, "stacks", 0))
             if value_type == "percent_max_hp":
                 percent = float(value.get("percent", 0))
                 return int(self.combat.state.run_state.player.max_hp * percent / 100)

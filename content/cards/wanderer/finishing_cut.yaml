@@ -1,0 +1,22 @@
+schema_version: 1
+id: finishing_cut
+name: 決め斬り
+image: double_cut.png
+character: wanderer
+type: attack
+rarity: uncommon
+cost: 1
+target: enemy
+exhaust: true
+description: 18ダメージを与える。廃棄。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 18
+upgrade:
+  name: 決め斬り+
+  description: 24ダメージを与える。廃棄。
+  effects:
+    - type: damage
+      target: selected_enemy
+      amount: 24

@@ -1,0 +1,29 @@
+schema_version: 1
+id: opening_focus
+name: 開幕集中
+image: battle_focus.png
+character: wanderer
+type: power
+rarity: rare
+cost: 1
+target: self
+innate: true
+description: 天性。この戦闘中、各ターン開始時に1ブロックを得る。
+effects: []
+power:
+  id: opening_focus
+  stacking: stack
+  initial_stacks: 1
+  triggers:
+    - event: turn_start
+      effects:
+        - type: gain_block
+          target: self
+          amount:
+            type: power_stacks
+            power: opening_focus
+upgrade:
+  name: 開幕集中+
+  description: 天性。この戦闘中、各ターン開始時に2ブロックを得る。
+  power:
+    initial_stacks: 2

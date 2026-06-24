@@ -28,6 +28,8 @@ python main.py
 - マップノード選択
 - 通常戦闘 / エリート / ボス戦闘
 - カード使用、ダメージ、ブロック、ドロー、状態付与
+- ActionQueueによる戦闘効果解決
+- Powerカード / Exhaust / Retain / Ethereal / Innate / Unplayable
 - ポーションの獲得、購入、戦闘中使用
 - 敵Intentと簡易AI
 - 戦闘報酬、カード追加、レリック獲得、ポーション獲得
@@ -62,7 +64,7 @@ src/spirelike/
   core/       RunState、CombatState、RNG、ラン生成
   models/     Dataclass群
   scenes/     画面
-  systems/    戦闘、効果実行、マップ生成、報酬、ショップなど
+  systems/    戦闘、効果実行、報酬、マップ生成、ショップなど
   ui/         ボタン、カード表示、ポーション表示、テキスト描画
 
 content/

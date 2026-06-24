@@ -5,8 +5,12 @@ from typing import Any, Optional
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, CombatState, EnemyInstance, PlayerState, RunState
+from spirelike.systems.action_queue import ActionQueue
+from spirelike.systems.actions import DrawCardsAction, EndTurnHandCleanupAction, FinishCardUseAction, PlayCardAction, TriggerEventAction
 from spirelike.systems.ancient_system import AncientSystem
+from spirelike.systems.card_rules import CardRules
 from spirelike.systems.effect_executor import EffectExecutor
+from spirelike.systems.power_system import PowerSystem
 
 
 DURATION_STATUSES = {"weak", "vulnerable"}
@@ -23,9 +27,13 @@ class CombatSystem:
         self.registry = registry
         self.run_state = run_state
         self.rng = rng
+        self.card_rules = CardRules(registry)
+        self.power_system = PowerSystem(registry)
+        self.action_queue = ActionQueue()
+        self.draw_per_turn = 5
+
         enemies = [self._create_enemy(enemy_id) for enemy_id in enemy_ids]
-        draw_pile = [card.clone_for_combat() for card in run_state.player.deck]
-        rng.shuffle(draw_pile)
+        draw_pile = self._build_combat_draw_pile()
         self.state = CombatState(
             run_state=run_state,
             enemies=enemies,
@@ -33,12 +41,24 @@ class CombatSystem:
             hand=[],
             discard_pile=[],
             exhaust_pile=[],
+            limbo=[],
+            powers=[],
             energy=run_state.player.base_energy,
         )
         self.executor = EffectExecutor(self)
         self.choose_enemy_moves()
-        self.fire_trigger_event("combat_start")
+        self.enqueue_action(TriggerEventAction("combat_start", {"owner": "player"}))
+        self.resolve_actions()
         self.start_player_turn(first_turn=True)
+
+    def _build_combat_draw_pile(self) -> list[CardInstance]:
+        cards = [card.clone_for_combat() for card in self.run_state.player.deck]
+        innate_cards = [card for card in cards if self.card_rules.has_flag(card, "innate")]
+        regular_cards = [card for card in cards if not self.card_rules.has_flag(card, "innate")]
+        self.rng.shuffle(regular_cards)
+        self.rng.shuffle(innate_cards)
+        # draw_pile は pop() で引くため、天性カードを末尾に置く。
+        return regular_cards + innate_cards
 
     def _create_enemy(self, enemy_id: str) -> EnemyInstance:
         enemy_def = self.registry.enemy(enemy_id)
@@ -52,6 +72,12 @@ class CombatSystem:
             block=int(enemy_def.get("block", 0)),
         )
 
+    def enqueue_action(self, action) -> None:
+        self.action_queue.add(action)
+
+    def resolve_actions(self) -> None:
+        self.action_queue.resolve_all(self)
+
     def log(self, text: str) -> None:
         self.state.add_log(text)
 
@@ -60,13 +86,20 @@ class CombatSystem:
             return
         player = self.run_state.player
         self.state.turn_number += 1
+        self.state.cards_played_this_turn = 0
         player.block = 0
         self.state.energy = player.base_energy
-        self.fire_trigger_event("turn_start")
-        self.draw_cards(5)
+        self.enqueue_action(TriggerEventAction("turn_start", {"owner": "player"}))
+        self.enqueue_action(DrawCardsAction(self.draw_per_turn))
+        self.resolve_actions()
         self.log(f"ターン {self.state.turn_number} 開始")
 
     def draw_cards(self, amount: int) -> None:
+        self.enqueue_action(DrawCardsAction(amount))
+        if not self.action_queue.is_resolving:
+            self.resolve_actions()
+
+    def draw_cards_immediate(self, amount: int) -> None:
         for _ in range(max(0, amount)):
             if len(self.state.hand) >= 10:
                 return
@@ -79,6 +112,13 @@ class CombatSystem:
                 self.log("捨て札をシャッフル")
             card = self.state.draw_pile.pop()
             self.add_to_hand(card)
+            context = {
+                "source": self.run_state.player,
+                "target": self.run_state.player,
+                "card": card,
+                "card_def": self.registry.card(card.card_id),
+            }
+            self.enqueue_action(TriggerEventAction("card_drawn", context))
 
     def add_to_hand(self, card: CardInstance) -> None:
         if len(self.state.hand) < 10:
@@ -86,15 +126,36 @@ class CombatSystem:
         else:
             self.state.discard_pile.append(card)
 
+    def add_generated_card_to_pile(self, card_id: str, amount: int, pile: str) -> None:
+        for _ in range(max(0, amount)):
+            card = CardInstance(card_id=card_id, temporary=True)
+            if pile == "hand":
+                self.add_to_hand(card)
+            elif pile == "discard":
+                self.state.discard_pile.append(card)
+            elif pile == "exhaust":
+                self.state.exhaust_pile.append(card)
+            else:
+                self.state.draw_pile.append(card)
+        self.log(f"{card_id} を{amount}枚追加")
+
     def can_play(self, card: CardInstance) -> tuple[bool, str]:
+        if self.card_rules.has_flag(card, "unplayable"):
+            return False, "使用不可"
         cost = self.get_card_cost(card)
         if isinstance(cost, str) and cost.upper() == "X":
             return True, ""
-        if int(cost) > self.state.energy:
+        try:
+            numeric_cost = int(cost)
+        except (TypeError, ValueError):
+            return False, "不正なコスト"
+        if numeric_cost > self.state.energy:
             return False, "エナジー不足"
         return True, ""
 
     def get_card_cost(self, card: CardInstance):
+        if "cost" in card.state:
+            return card.state["cost"]
         return self.registry.card_cost(card.card_id, card.upgraded)
 
     def play_card(self, card: CardInstance, target: Optional[EnemyInstance] = None) -> bool:
@@ -112,36 +173,64 @@ class CombatSystem:
 
         cost = self.get_card_cost(card)
         spent = self.state.energy if isinstance(cost, str) and cost.upper() == "X" else int(cost)
-        self.state.energy -= spent
-        self.state.hand.remove(card)
+        self.enqueue_action(PlayCardAction(card=card, target=target, spent_energy=spent))
+        self.resolve_actions()
+        return True
 
-        self.log(f"{self.registry.card_display_name(card.card_id, card.upgraded)} を使用")
-        effects = self.registry.card_effects(card.card_id, card.upgraded)
+    def resolve_card_play_immediate(
+        self,
+        card: CardInstance,
+        target: Optional[EnemyInstance],
+        spent_energy: int,
+    ) -> None:
+        if card not in self.state.hand:
+            return
+        card_def = self.registry.card(card.card_id)
+        self.state.energy -= spent_energy
+        self.move_card(card, "hand", "limbo")
+        self.state.cards_played_this_turn += 1
+
         context = {
             "source": self.run_state.player,
             "target": target,
             "card": card,
             "card_def": card_def,
-            "spent_energy": spent,
+            "spent_energy": spent_energy,
         }
-        self.executor.execute_many(effects, context)
-        if not card.temporary:
-            self.state.discard_pile.append(card)
-        else:
-            self.state.exhaust_pile.append(card)
-        self._remove_dead_enemies()
-        self._check_victory_or_defeat()
+
+        self.log(f"{self.registry.card_display_name(card.card_id, card.upgraded)} を使用")
+        self.enqueue_action(TriggerEventAction("card_played", context))
+        self.executor.execute_many(self.registry.card_effects(card.card_id, card.upgraded), context)
+        self.enqueue_action(TriggerEventAction("card_resolved", context))
+        self.enqueue_action(FinishCardUseAction(card=card, context=context))
+
+    def move_card(self, card: CardInstance, from_zone: str, to_zone: str) -> bool:
+        source = getattr(self.state, from_zone)
+        destination = getattr(self.state, to_zone)
+        if card not in source:
+            return False
+        source.remove(card)
+        destination.append(card)
+        return True
+
+    def remove_from_limbo(self, card: CardInstance) -> bool:
+        if card not in self.state.limbo:
+            return False
+        self.state.limbo.remove(card)
         return True
 
     def end_player_turn(self) -> None:
         if self.state.outcome is not None:
             return
-        self.state.discard_pile.extend(self.state.hand)
-        self.state.hand.clear()
+        self.enqueue_action(TriggerEventAction("player_turn_end", {"owner": "player"}))
+        self.enqueue_action(EndTurnHandCleanupAction())
+        self.resolve_actions()
         self._tick_statuses(self.run_state.player, owner="player")
 
         for enemy in self.state.alive_enemies():
             enemy.block = 0
+        self.enqueue_action(TriggerEventAction("enemy_turn_start", {"owner": "enemy"}))
+        self.resolve_actions()
         for enemy in list(self.state.alive_enemies()):
             self._enemy_take_turn(enemy)
             self._check_victory_or_defeat()
@@ -150,6 +239,8 @@ class CombatSystem:
 
         for enemy in self.state.alive_enemies():
             self._tick_statuses(enemy, owner="enemy")
+        self.enqueue_action(TriggerEventAction("enemy_turn_end", {"owner": "enemy"}))
+        self.resolve_actions()
         self.choose_enemy_moves()
         self.start_player_turn()
 
@@ -162,6 +253,7 @@ class CombatSystem:
         self.log(f"{enemy.name}: {move.get('name', move_id)}")
         context = {"source": enemy, "target": self.run_state.player, "card_def": {"type": "attack"}}
         self.executor.execute_many(move.get("effects", []), context)
+        self.resolve_actions()
         enemy.last_move = move_id
 
     def choose_enemy_moves(self) -> None:
@@ -200,6 +292,8 @@ class CombatSystem:
 
     def deal_damage(self, source, target, amount: int, card_def: Optional[dict[str, Any]] = None) -> int:
         if target is None or amount <= 0:
+            return 0
+        if hasattr(target, "is_alive") and not target.is_alive():
             return 0
         amount = self._calculate_damage(source, target, amount, card_def or {})
         blocked = min(getattr(target, "block", 0), amount)
@@ -255,12 +349,37 @@ class CombatSystem:
             self.state.outcome = "defeat"
             self.log("敗北")
         elif not self.state.alive_enemies():
+            if not self.state.combat_end_fired:
+                self.state.combat_end_fired = True
+                self.enqueue_action(TriggerEventAction("combat_end", {"owner": "player"}))
             if self.state.outcome != "victory":
-                self.fire_trigger_event("combat_end")
-            self.state.outcome = "victory"
-            self.log("勝利")
+                self.state.outcome = "victory"
+                self.log("勝利")
 
-    def fire_trigger_event(self, event_name: str) -> None:
+    def trigger_matches(self, when: dict[str, Any] | None, context: dict[str, Any]) -> bool:
+        if not when:
+            return True
+        card_def = context.get("card_def") or {}
+        card = context.get("card")
+
+        if "card_type" in when and card_def.get("type") != when["card_type"]:
+            return False
+        if "card_rarity" in when and card_def.get("rarity") != when["card_rarity"]:
+            return False
+        if "card_has_tag" in when:
+            tags = set(card_def.get("tags", []) or [])
+            if when["card_has_tag"] not in tags:
+                return False
+        if "card_cost_at_least" in when and card is not None:
+            cost = self.get_card_cost(card)
+            if isinstance(cost, str):
+                return False
+            if int(cost) < int(when["card_cost_at_least"]):
+                return False
+        return True
+
+    def fire_trigger_event(self, event_name: str, event_context: dict[str, Any] | None = None) -> None:
+        event_context = event_context or {}
         player = self.run_state.player
         # Relic triggers
         for relic in player.relics:
@@ -268,7 +387,9 @@ class CombatSystem:
             for trigger in relic_def.get("triggers", []) or []:
                 if trigger.get("event") != event_name:
                     continue
-                context = {"source": player, "target": player, "relic": relic, "card_def": {}}
+                if not self.trigger_matches(trigger.get("when"), event_context):
+                    continue
+                context = {**event_context, "source": player, "target": player, "relic": relic, "card_def": event_context.get("card_def", {})}
                 self.executor.execute_many(trigger.get("effects", []), context)
 
         # Ancient blessing triggers
@@ -283,13 +404,38 @@ class CombatSystem:
             for trigger in choice.get("triggers", []) or []:
                 if trigger.get("event") != event_name:
                     continue
+                if not self.trigger_matches(trigger.get("when"), event_context):
+                    continue
                 context = {
+                    **event_context,
                     "source": player,
                     "target": player,
                     "ancient_blessing": blessing,
-                    "card_def": {},
+                    "card_def": event_context.get("card_def", {}),
                 }
                 self.executor.execute_many(trigger.get("effects", []), context)
+
+        # Power triggers
+        for power in list(self.state.powers):
+            if power.owner != "player":
+                continue
+            power_def = self.power_system.power_def(power)
+            for trigger in power_def.get("triggers", []) or []:
+                if trigger.get("event") != event_name:
+                    continue
+                if not self.trigger_matches(trigger.get("when"), event_context):
+                    continue
+                context = {
+                    **event_context,
+                    "source": player,
+                    "target": player,
+                    "power": power,
+                    "card_def": event_context.get("card_def", {}),
+                }
+                self.executor.execute_many(trigger.get("effects", []), context)
+
+        if not self.action_queue.is_resolving:
+            self.resolve_actions()
 
     # 旧名互換。既存の拡張やテストから呼ばれても動くようにしておく。
     def fire_relic_event(self, event_name: str) -> None:

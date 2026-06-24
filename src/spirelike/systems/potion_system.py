@@ -111,6 +111,7 @@ class PotionSystem:
             "card_def": potion_def,
         }
         combat_system.executor.execute_many(potion_def.get("effects", []), context)
+        combat_system.resolve_actions()
         run_state.player.potions[slot_index] = None
         combat_system._remove_dead_enemies()
         combat_system._check_victory_or_defeat()

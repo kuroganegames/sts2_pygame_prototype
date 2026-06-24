@@ -7,5 +7,6 @@ type: status
 rarity: special
 cost: 0
 target: none
-description: 何もしない。戦闘終了時に消える。
+unplayable: true
+description: 使用できない。戦闘終了時に消える。
 effects: []

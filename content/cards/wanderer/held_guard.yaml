@@ -1,0 +1,22 @@
+schema_version: 1
+id: held_guard
+name: 構え続ける
+image: guard.png
+character: wanderer
+type: skill
+rarity: common
+cost: 1
+target: self
+retain: true
+description: 8ブロックを得る。保留。
+effects:
+  - type: gain_block
+    target: self
+    amount: 8
+upgrade:
+  name: 構え続ける+
+  description: 11ブロックを得る。保留。
+  effects:
+    - type: gain_block
+      target: self
+      amount: 11
