@@ -37,7 +37,11 @@ class CharacterSelectScene(BaseScene):
     def start_run(self, character_id: str) -> None:
         run = create_run(self.app.registry, character_id)
         self.app.run_state = run
-        self.app.scene_manager.change("map", {"run_state": run})
+        # ラン開始時にエンシェント選択を挟む。YAMLが無い場合はAncientScene側でマップへ進める。
+        self.app.scene_manager.change(
+            "ancient",
+            {"run_state": run, "after": "map", "phase": "run_start"},
+        )
 
     def draw(self, surface) -> None:
         surface.fill(colors.BG)

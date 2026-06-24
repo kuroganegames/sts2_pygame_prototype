@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 import pygame
 
 from spirelike.core.rng import RunRng
@@ -20,6 +19,7 @@ NODE_COLORS = {
     "shop": (210, 185, 80),
     "rest": (90, 175, 120),
     "treasure": (185, 150, 70),
+    "ancient": (90, 150, 205),
     "boss": (220, 70, 70),
 }
 
@@ -30,6 +30,7 @@ NODE_LABELS = {
     "shop": "$",
     "rest": "R",
     "treasure": "T",
+    "ancient": "A",
     "boss": "B",
 }
 
@@ -79,6 +80,11 @@ class MapScene(BaseScene):
             self.app.scene_manager.change("shop", {"run_state": self.run_state, "node_id": node_id})
         elif node.node_type == "event":
             self.app.scene_manager.change("event", {"run_state": self.run_state, "node_id": node_id})
+        elif node.node_type == "ancient":
+            self.app.scene_manager.change(
+                "ancient",
+                {"run_state": self.run_state, "node_id": node_id, "after": "map", "phase": "node"},
+            )
         else:
             self.run_state.map_state.mark_visited(node_id)
 
@@ -88,9 +94,14 @@ class MapScene(BaseScene):
         player = run.player
         draw_text(surface, "マップ", get_font(38, bold=True), colors.TEXT, (40, 28))
         draw_text(surface, f"HP {player.hp}/{player.max_hp}   Gold {player.gold}   Deck {len(player.deck)}", get_font(22), colors.GOLD, (40, 78))
-        draw_text(surface, f"Seed {run.seed} / Floor {run.floor}", get_font(18), colors.MUTED, (40, 108))
+        potion_text = " / ".join(
+            self.app.registry.potion(p.potion_id).get("name", p.potion_id) if p else "空"
+            for p in player.potions
+        )
+        draw_text(surface, f"Potions: {potion_text}", get_font(16), colors.MUTED, (40, 108))
+        draw_text(surface, f"Seed {run.seed} / Floor {run.floor}", get_font(16), colors.MUTED, (40, 130))
 
-        map_rect = pygame.Rect(70, 140, 900, 540)
+        map_rect = pygame.Rect(70, 160, 900, 510)
         self.node_rects.clear()
         nodes = run.map_state.nodes
         for node in nodes.values():

@@ -6,12 +6,14 @@ from spirelike.core.rng import RunRng
 from spirelike.models.entities import EnemyInstance
 from spirelike.scenes.base_scene import BaseScene
 from spirelike.systems.combat_system import CombatSystem
+from spirelike.systems.potion_system import PotionSystem
 from spirelike.systems.reward_system import RewardSystem
 from spirelike.ui import colors
 from spirelike.ui.buttons import Button
 from spirelike.ui.card_view import CardView
 from spirelike.ui.fonts import get_font
 from spirelike.ui.images import image_cache
+from spirelike.ui.potion_bar import PotionBar
 from spirelike.ui.text import draw_text
 
 
@@ -24,13 +26,17 @@ class CombatScene(BaseScene):
         self.enemy_ids = payload.get("enemy_ids", [])
         rngs = RunRng(self.run_state.seed + self.run_state.floor)
         self.combat = CombatSystem(app.registry, self.run_state, self.enemy_ids, rngs.combat)
+        self.potion_system = PotionSystem(app.registry)
         self.selected_card = None
+        self.selected_potion_slot: int | None = None
         self.card_rects: dict[str, pygame.Rect] = {}
         self.enemy_rects: dict[str, pygame.Rect] = {}
+        self.potion_rects: dict[int, pygame.Rect] = {}
         self.buttons = [Button((1110, 610, 140, 52), "ターン終了", self.end_turn)]
 
     def end_turn(self) -> None:
         self.selected_card = None
+        self.selected_potion_slot = None
         self.combat.end_player_turn()
         self._after_state_change()
 
@@ -40,7 +46,17 @@ class CombatScene(BaseScene):
             pass
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pos = event.pos
-            # 対象選択中に敵をクリック
+            # ポーション対象選択中に敵をクリック
+            if self.selected_potion_slot is not None:
+                for enemy in self.combat.state.alive_enemies():
+                    rect = self.enemy_rects.get(enemy.enemy_id + str(id(enemy)))
+                    if rect and rect.collidepoint(pos):
+                        self.potion_system.use_in_combat(self.combat, self.selected_potion_slot, enemy)
+                        self.selected_potion_slot = None
+                        self._after_state_change()
+                        return
+
+            # カード対象選択中に敵をクリック
             if self.selected_card is not None:
                 for enemy in self.combat.state.alive_enemies():
                     rect = self.enemy_rects.get(enemy.enemy_id + str(id(enemy)))
@@ -49,6 +65,13 @@ class CombatScene(BaseScene):
                         self.selected_card = None
                         self._after_state_change()
                         return
+
+            # ポーションクリック
+            for slot_index, rect in self.potion_rects.items():
+                if rect.collidepoint(pos):
+                    self.on_potion_clicked(slot_index)
+                    return
+
             # カードクリック
             for card in list(self.combat.state.hand):
                 rect = self.card_rects.get(card.instance_id)
@@ -56,12 +79,31 @@ class CombatScene(BaseScene):
                     self.on_card_clicked(card)
                     return
 
+    def on_potion_clicked(self, slot_index: int) -> None:
+        potion = self.run_state.player.potions[slot_index]
+        if potion is None:
+            return
+        potion_def = self.app.registry.potion(potion.potion_id)
+        ok, reason = self.potion_system.can_use_in_combat(self.run_state, slot_index)
+        if not ok:
+            self.combat.log(reason)
+            return
+        self.selected_card = None
+        if potion_def.get("target") == "enemy":
+            self.selected_potion_slot = slot_index
+            self.combat.log("ポーション対象の敵を選択")
+        else:
+            self.potion_system.use_in_combat(self.combat, slot_index, None)
+            self.selected_potion_slot = None
+            self._after_state_change()
+
     def on_card_clicked(self, card) -> None:
         card_def = self.app.registry.card(card.card_id)
         ok, reason = self.combat.can_play(card)
         if not ok:
             self.combat.log(reason)
             return
+        self.selected_potion_slot = None
         if card_def.get("target") == "enemy":
             self.selected_card = card
             self.combat.log("敵を選択")
@@ -98,6 +140,13 @@ class CombatScene(BaseScene):
         draw_text(surface, "戦闘", get_font(32, bold=True), colors.TEXT, (40, 20))
         draw_text(surface, f"HP {player.hp}/{player.max_hp}   Block {player.block}   Energy {state.energy}/{player.base_energy}   Gold {player.gold}", get_font(22), colors.GOLD, (40, 62))
         draw_text(surface, f"Draw {len(state.draw_pile)} / Discard {len(state.discard_pile)} / Exhaust {len(state.exhaust_pile)}", get_font(18), colors.MUTED, (40, 94))
+
+        self.potion_rects = PotionBar(self.app.registry, self.run_state, (400, 38)).draw(surface)
+
+        if self.selected_potion_slot is not None:
+            draw_text(surface, "ポーション対象を選択中", get_font(18, bold=True), colors.GOLD, (690, 64))
+        elif self.selected_card is not None:
+            draw_text(surface, "カード対象を選択中", get_font(18, bold=True), colors.GOLD, (690, 64))
 
         self.enemy_rects.clear()
         alive = state.alive_enemies()

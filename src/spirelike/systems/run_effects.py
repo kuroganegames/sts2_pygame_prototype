@@ -8,7 +8,7 @@ from spirelike.models.entities import CardInstance, RelicInstance, RunState
 
 
 class RunEffectExecutor:
-    """イベントやショップなど、戦闘外で使う簡易Effect実行器。"""
+    """イベント、エンシェント、マップ上の選択肢で使う戦闘外Effect実行器。"""
 
     def __init__(self, registry: ContentRegistry, rng: random.Random) -> None:
         self.registry = registry
@@ -45,21 +45,72 @@ class RunEffectExecutor:
                 run_state.add_message(f"カード追加: {self.registry.card(card_id).get('name', card_id)}")
         elif effect_type == "max_hp":
             amount = self.resolve_amount(run_state, effect.get("amount", 0))
-            player.max_hp += amount
-            player.hp += max(0, amount)
+            player.max_hp = max(1, player.max_hp + amount)
+            if amount > 0:
+                player.hp += amount
+            player.hp = min(player.hp, player.max_hp)
             run_state.add_message(f"最大HP {amount:+}")
         elif effect_type == "upgrade_random_card":
-            candidates = [card for card in player.deck if not card.upgraded and self.registry.card(card.card_id).get("upgrade")]
+            candidates = self._card_candidates(player.deck, effect.get("filter", {}) or {}, require_upgrade=True)
             if candidates:
                 card = self.rng.choice(candidates)
                 card.upgraded = True
                 run_state.add_message(f"カード強化: {self.registry.card_display_name(card.card_id, True)}")
+        elif effect_type == "remove_random_card_from_deck":
+            candidates = self._card_candidates(player.deck, effect.get("filter", {}) or {}, require_upgrade=False)
+            if candidates:
+                card = self.rng.choice(candidates)
+                player.deck.remove(card)
+                run_state.add_message(f"カード削除: {self.registry.card_display_name(card.card_id, card.upgraded)}")
+        elif effect_type == "gain_potion":
+            from spirelike.systems.potion_system import PotionSystem
+
+            potion_id = str(effect.get("potion"))
+            PotionSystem(self.registry).grant_potion(run_state, potion_id)
+        elif effect_type == "gain_random_potion":
+            from spirelike.systems.potion_system import PotionSystem
+
+            PotionSystem(self.registry).grant_random_potion(
+                run_state,
+                self.rng,
+                rarity_weights=effect.get("rarity_weights"),
+            )
+        elif effect_type == "none" or effect_type is None:
+            return
+        else:
+            run_state.add_message(f"未実装Effect: {effect_type}")
+
+    def _card_candidates(
+        self,
+        deck: list[CardInstance],
+        filter_def: dict[str, Any],
+        *,
+        require_upgrade: bool,
+    ) -> list[CardInstance]:
+        candidates: list[CardInstance] = []
+        for card in deck:
+            card_def = self.registry.card(card.card_id)
+            if require_upgrade and (card.upgraded or not card_def.get("upgrade")):
+                continue
+            if filter_def.get("type") and card_def.get("type") != filter_def["type"]:
+                continue
+            if filter_def.get("rarity") and card_def.get("rarity") != filter_def["rarity"]:
+                continue
+            if filter_def.get("card") and card.card_id != filter_def["card"]:
+                continue
+            candidates.append(card)
+        return candidates
 
     def resolve_amount(self, run_state: RunState, value: Any) -> int:
         if isinstance(value, int):
             return value
         if isinstance(value, float):
             return int(value)
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError:
+                return 0
         if isinstance(value, dict):
             if value.get("type") == "percent_max_hp":
                 return int(run_state.player.max_hp * float(value.get("percent", 0)) / 100)

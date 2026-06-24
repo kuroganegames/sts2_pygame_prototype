@@ -1,0 +1,13 @@
+schema_version: 1
+id: weak_potion
+name: 脱力ポーション
+image: weak_potion.png
+rarity: rare
+usage: combat
+target: enemy
+description: 敵1体に弱体を3付与する。
+effects:
+  - type: apply_status
+    target: selected_enemy
+    status: weak
+    stacks: 3

@@ -14,6 +14,7 @@ from spirelike.scenes.reward_scene import RewardScene
 from spirelike.scenes.rest_scene import RestScene
 from spirelike.scenes.event_scene import EventScene
 from spirelike.scenes.shop_scene import ShopScene
+from spirelike.scenes.ancient_scene import AncientScene
 from spirelike.scenes.run_result_scene import RunResultScene
 
 
@@ -49,6 +50,7 @@ class GameApp:
         self.scene_manager.register("rest", lambda app, payload: RestScene(app, payload))
         self.scene_manager.register("event", lambda app, payload: EventScene(app, payload))
         self.scene_manager.register("shop", lambda app, payload: ShopScene(app, payload))
+        self.scene_manager.register("ancient", lambda app, payload: AncientScene(app, payload))
         self.scene_manager.register("run_result", lambda app, payload: RunResultScene(app, payload))
 
     def run(self) -> None:

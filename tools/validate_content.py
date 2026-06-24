@@ -13,4 +13,13 @@ if registry.warnings:
         print(f"- {warning}")
     raise SystemExit(1)
 print("OK")
-print(f"cards={len(registry.cards)} enemies={len(registry.enemies)} relics={len(registry.relics)} events={len(registry.events)}")
+print(
+    "cards={cards} enemies={enemies} relics={relics} potions={potions} ancients={ancients} events={events}".format(
+        cards=len(registry.cards),
+        enemies=len(registry.enemies),
+        relics=len(registry.relics),
+        potions=len(registry.potions),
+        ancients=len(registry.ancients),
+        events=len(registry.events),
+    )
+)

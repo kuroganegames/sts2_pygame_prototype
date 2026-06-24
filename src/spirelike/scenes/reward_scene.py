@@ -50,14 +50,23 @@ class RewardScene(BaseScene):
             y += 36
         if self.reward.relic_id:
             relic = self.app.registry.relic(self.reward.relic_id)
-            box = pygame.Rect(500, y, 280, 96)
+            box = pygame.Rect(420, y, 440, 96)
             pygame.draw.rect(surface, colors.PANEL, box, border_radius=12)
             image_path = self.app.registry.relics[self.reward.relic_id].image_path
             surface.blit(image_cache.load(image_path, (64, 64)), (box.x + 16, box.y + 16))
             draw_text(surface, relic.get("name", self.reward.relic_id), get_font(22, bold=True), colors.GOLD, (box.x + 94, box.y + 18))
             desc_rect = pygame.Rect(box.x + 94, box.y + 48, box.width - 110, 42)
             draw_wrapped(surface, relic.get("description", ""), get_font(15), colors.TEXT, desc_rect)
-            y += 120
+            y += 110
+        if self.reward.potion_id:
+            potion = self.app.registry.potion(self.reward.potion_id)
+            box = pygame.Rect(420, y, 440, 76)
+            pygame.draw.rect(surface, colors.PANEL, box, border_radius=12)
+            image_path = self.app.registry.potions[self.reward.potion_id].image_path
+            surface.blit(image_cache.load(image_path, (50, 50)), (box.x + 20, box.y + 13))
+            draw_text(surface, f"ポーション: {potion.get('name', self.reward.potion_id)}", get_font(22, bold=True), colors.GOLD, (box.x + 90, box.y + 16))
+            draw_text(surface, potion.get("description", ""), get_font(15), colors.TEXT, (box.x + 90, box.y + 44))
+            y += 88
         if self.reward.message:
             draw_text(surface, self.reward.message, get_font(20), colors.MUTED, (640, y), center=True)
             y += 38

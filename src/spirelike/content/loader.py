@@ -24,6 +24,8 @@ class ContentRegistry:
     statuses: Dict[str, ContentItem] = field(default_factory=dict)
     maps: Dict[str, ContentItem] = field(default_factory=dict)
     events: Dict[str, ContentItem] = field(default_factory=dict)
+    potions: Dict[str, ContentItem] = field(default_factory=dict)
+    ancients: Dict[str, ContentItem] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
     def card(self, card_id: str) -> dict[str, Any]:
@@ -46,6 +48,12 @@ class ContentRegistry:
 
     def event(self, event_id: str) -> dict[str, Any]:
         return self.events[event_id].data
+
+    def potion(self, potion_id: str) -> dict[str, Any]:
+        return self.potions[potion_id].data
+
+    def ancient(self, ancient_id: str) -> dict[str, Any]:
+        return self.ancients[ancient_id].data
 
     def image_for(self, kind: str, item_id: str) -> Optional[Path]:
         table = getattr(self, kind)
@@ -91,6 +99,8 @@ class ContentLoader:
         self._load_collection("statuses", self.registry.statuses, require_image=False)
         self._load_collection("maps", self.registry.maps, require_image=False)
         self._load_collection("events", self.registry.events, require_image=True, recursive=True)
+        self._load_collection("potions", self.registry.potions, require_image=True, recursive=True)
+        self._load_collection("ancients", self.registry.ancients, require_image=True, recursive=True)
         self._validate_references()
         return self.registry
 
@@ -170,6 +180,22 @@ class ContentLoader:
             for move_id, move in (item.data.get("moves", {}) or {}).items():
                 self._validate_effects(move.get("effects", []), f"enemy {enemy_id}.{move_id}")
 
+        for potion_id, item in self.registry.potions.items():
+            self._validate_effects(item.data.get("effects", []), f"potion {potion_id}")
+
+        for ancient_id, item in self.registry.ancients.items():
+            choices = item.data.get("choices", []) or []
+            if not choices:
+                self.registry.warnings.append(f"Ancient {ancient_id} has no choices")
+            for choice in choices:
+                choice_id = choice.get("id", "<missing>")
+                self._validate_effects(choice.get("effects", []), f"ancient {ancient_id}.{choice_id}")
+                for trigger in choice.get("triggers", []) or []:
+                    self._validate_effects(
+                        trigger.get("effects", []),
+                        f"ancient {ancient_id}.{choice_id}.{trigger.get('event', '<event>')}",
+                    )
+
     def _validate_effects(self, effects: Iterable[dict[str, Any]], where: str) -> None:
         for effect in effects or []:
             if not isinstance(effect, dict):
@@ -186,6 +212,18 @@ class ContentLoader:
                 if card_id not in self.registry.cards:
                     self.registry.warnings.append(
                         f"{where} references missing card: {card_id}"
+                    )
+            if effect.get("type") == "gain_relic":
+                relic_id = effect.get("relic")
+                if relic_id not in self.registry.relics:
+                    self.registry.warnings.append(
+                        f"{where} references missing relic: {relic_id}"
+                    )
+            if effect.get("type") == "gain_potion":
+                potion_id = effect.get("potion")
+                if potion_id not in self.registry.potions:
+                    self.registry.warnings.append(
+                        f"{where} references missing potion: {potion_id}"
                     )
             if effect.get("type") == "if":
                 self._validate_effects(effect.get("then", []), where)

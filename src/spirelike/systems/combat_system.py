@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, CombatState, EnemyInstance, PlayerState, RunState
+from spirelike.systems.ancient_system import AncientSystem
 from spirelike.systems.effect_executor import EffectExecutor
 
 
@@ -36,7 +37,7 @@ class CombatSystem:
         )
         self.executor = EffectExecutor(self)
         self.choose_enemy_moves()
-        self.fire_relic_event("combat_start")
+        self.fire_trigger_event("combat_start")
         self.start_player_turn(first_turn=True)
 
     def _create_enemy(self, enemy_id: str) -> EnemyInstance:
@@ -61,7 +62,7 @@ class CombatSystem:
         self.state.turn_number += 1
         player.block = 0
         self.state.energy = player.base_energy
-        self.fire_relic_event("turn_start")
+        self.fire_trigger_event("turn_start")
         self.draw_cards(5)
         self.log(f"ターン {self.state.turn_number} 開始")
 
@@ -124,7 +125,6 @@ class CombatSystem:
             "spent_energy": spent,
         }
         self.executor.execute_many(effects, context)
-        # Powerの常駐処理は今後の拡張ポイント。現時点では使用後捨て札へ。
         if not card.temporary:
             self.state.discard_pile.append(card)
         else:
@@ -234,7 +234,6 @@ class CombatSystem:
         self.log(f"{name}: {status_name} +{stacks}")
 
     def _tick_statuses(self, target, owner: str) -> None:
-        # 毒はターン終了時にダメージを与えて1減る。
         poison = int(target.statuses.get("poison", 0))
         if poison > 0:
             self.deal_damage(target, target, poison, {"type": "status"})
@@ -256,12 +255,14 @@ class CombatSystem:
             self.state.outcome = "defeat"
             self.log("敗北")
         elif not self.state.alive_enemies():
+            if self.state.outcome != "victory":
+                self.fire_trigger_event("combat_end")
             self.state.outcome = "victory"
-            self.fire_relic_event("combat_end")
             self.log("勝利")
 
-    def fire_relic_event(self, event_name: str) -> None:
+    def fire_trigger_event(self, event_name: str) -> None:
         player = self.run_state.player
+        # Relic triggers
         for relic in player.relics:
             relic_def = self.registry.relic(relic.relic_id)
             for trigger in relic_def.get("triggers", []) or []:
@@ -269,3 +270,27 @@ class CombatSystem:
                     continue
                 context = {"source": player, "target": player, "relic": relic, "card_def": {}}
                 self.executor.execute_many(trigger.get("effects", []), context)
+
+        # Ancient blessing triggers
+        ancient_system = AncientSystem(self.registry)
+        for blessing in self.run_state.ancient_blessings:
+            if blessing.ancient_id not in self.registry.ancients:
+                continue
+            ancient_def = self.registry.ancient(blessing.ancient_id)
+            choice = ancient_system.find_choice(ancient_def, blessing.choice_id)
+            if not choice:
+                continue
+            for trigger in choice.get("triggers", []) or []:
+                if trigger.get("event") != event_name:
+                    continue
+                context = {
+                    "source": player,
+                    "target": player,
+                    "ancient_blessing": blessing,
+                    "card_def": {},
+                }
+                self.executor.execute_many(trigger.get("effects", []), context)
+
+    # 旧名互換。既存の拡張やテストから呼ばれても動くようにしておく。
+    def fire_relic_event(self, event_name: str) -> None:
+        self.fire_trigger_event(event_name)
