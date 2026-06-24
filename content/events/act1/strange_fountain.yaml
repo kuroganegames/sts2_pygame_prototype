@@ -12,6 +12,11 @@ choices:
         amount:
           type: percent_max_hp
           percent: 20
+  - id: bottle
+    text: 水を瓶に詰める。回復ポーションを得る。
+    effects:
+      - type: gain_potion
+        potion: healing_potion
   - id: coin
     text: 底の硬貨を拾う。30ゴールドを得る。
     effects:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 import time
 
 from spirelike.content.loader import ContentRegistry
@@ -16,6 +15,7 @@ def create_run(registry: ContentRegistry, character_id: str, seed: int | None = 
     character = registry.character(character_id)
     deck = [CardInstance(card_id=card_id) for card_id in character.get("starting_deck", [])]
     relics = [RelicInstance(relic_id=relic_id) for relic_id in character.get("starting_relics", [])]
+    potion_slots = int(character.get("starting_potion_slots", 3))
     player = PlayerState(
         character_id=character_id,
         hp=int(character.get("starting_hp", character.get("max_hp", 70))),
@@ -24,7 +24,8 @@ def create_run(registry: ContentRegistry, character_id: str, seed: int | None = 
         base_energy=int(character.get("base_energy", 3)),
         deck=deck,
         relics=relics,
-        potion_slots=int(character.get("starting_potion_slots", 3)),
+        potion_slots=potion_slots,
+        potions=[None for _ in range(potion_slots)],
     )
     map_state = MapGenerator(registry).generate("act1", rng.map)
     run = RunState(

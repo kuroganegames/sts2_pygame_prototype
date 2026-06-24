@@ -1,0 +1,11 @@
+schema_version: 1
+id: energy_potion
+name: 活力ポーション
+image: energy_potion.png
+rarity: uncommon
+usage: combat
+target: self
+description: エナジーを2得る。
+effects:
+  - type: gain_energy
+    amount: 2

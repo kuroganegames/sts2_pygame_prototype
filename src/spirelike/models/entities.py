@@ -33,6 +33,19 @@ class RelicInstance:
 
 
 @dataclass
+class PotionInstance:
+    potion_id: str
+    instance_id: str = field(default_factory=new_id)
+
+
+@dataclass
+class AncientBlessingInstance:
+    ancient_id: str
+    choice_id: str
+    state: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class PlayerState:
     character_id: str
     hp: int
@@ -44,6 +57,16 @@ class PlayerState:
     statuses: dict[str, int] = field(default_factory=dict)
     block: int = 0
     potion_slots: int = 3
+    potions: list[PotionInstance | None] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        # セーブデータや古い生成処理から来ても、必ずスロット数とリスト長を揃える。
+        if not self.potions:
+            self.potions = [None for _ in range(self.potion_slots)]
+        elif len(self.potions) < self.potion_slots:
+            self.potions.extend([None for _ in range(self.potion_slots - len(self.potions))])
+        elif len(self.potions) > self.potion_slots:
+            self.potions = self.potions[: self.potion_slots]
 
     def is_alive(self) -> bool:
         return self.hp > 0
@@ -65,6 +88,12 @@ class PlayerState:
 
     def has_relic(self, relic_id: str) -> bool:
         return any(relic.relic_id == relic_id for relic in self.relics)
+
+    def first_empty_potion_slot(self) -> int | None:
+        for index, potion in enumerate(self.potions):
+            if potion is None:
+                return index
+        return None
 
 
 @dataclass
@@ -131,6 +160,7 @@ class RunState:
     map_state: MapState
     flags: dict[str, Any] = field(default_factory=dict)
     messages: list[str] = field(default_factory=list)
+    ancient_blessings: list[AncientBlessingInstance] = field(default_factory=list)
 
     def add_message(self, text: str) -> None:
         self.messages.append(text)

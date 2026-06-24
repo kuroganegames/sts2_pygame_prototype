@@ -1,0 +1,12 @@
+schema_version: 1
+id: fire_potion
+name: 火炎ポーション
+image: fire_potion.png
+rarity: common
+usage: combat
+target: enemy
+description: 敵1体に20ダメージを与える。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 20

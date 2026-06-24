@@ -1,0 +1,38 @@
+schema_version: 1
+id: forest_oracle
+name: 森の予言者
+image: forest_oracle.png
+act_pool: [1, 2]
+weight: 100
+description: 古い森の奥で、枝のような指を持つ存在があなたを待っている。
+choices:
+  - id: recover_memory
+    name: 記憶を取り戻す
+    description: HPを25%回復し、ランダムなカードを1枚削除する。
+    effects:
+      - type: heal
+        amount:
+          type: percent_max_hp
+          percent: 25
+      - type: remove_random_card_from_deck
+        filter:
+          rarity: basic
+  - id: sharpen_instinct
+    name: 本能を研ぐ
+    description: ランダムな攻撃カードを2枚強化する。
+    effects:
+      - type: upgrade_random_card
+        filter:
+          type: attack
+      - type: upgrade_random_card
+        filter:
+          type: attack
+  - id: take_brew
+    name: 小瓶を受け取る
+    description: ランダムなポーションを1つ得る。
+    effects:
+      - type: gain_random_potion
+        rarity_weights:
+          common: 70
+          uncommon: 25
+          rare: 5

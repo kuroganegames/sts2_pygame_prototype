@@ -1,0 +1,12 @@
+schema_version: 1
+id: block_potion
+name: 防御ポーション
+image: block_potion.png
+rarity: common
+usage: combat
+target: self
+description: 12ブロックを得る。
+effects:
+  - type: gain_block
+    target: self
+    amount: 12

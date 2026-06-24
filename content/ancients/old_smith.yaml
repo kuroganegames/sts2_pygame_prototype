@@ -1,0 +1,43 @@
+schema_version: 1
+id: old_smith
+name: 古き鍛冶師
+image: old_smith.png
+act_pool: [1, 2, 3]
+weight: 100
+description: 灰まみれの鍛冶師が、まだ火の入った炉の前でうなずく。
+choices:
+  - id: battle_temper
+    name: 戦火の焼入れ
+    description: 各戦闘開始時、筋力を1得る。
+    effects: []
+    triggers:
+      - event: combat_start
+        effects:
+          - type: apply_status
+            target: self
+            status: strength
+            stacks: 1
+  - id: guarded_soul
+    name: 守りの刻印
+    description: 各戦闘開始時、8ブロックを得る。
+    effects: []
+    triggers:
+      - event: combat_start
+        effects:
+          - type: gain_block
+            target: self
+            amount: 8
+  - id: unstable_forge
+    name: 不安定な鍛造
+    description: 各ターン開始時カードを1枚引くが、戦闘開始時に負傷を1枚山札へ加える。
+    effects: []
+    triggers:
+      - event: combat_start
+        effects:
+          - type: add_card_to_draw_pile
+            card: wound
+            amount: 1
+      - event: turn_start
+        effects:
+          - type: draw_cards
+            amount: 1

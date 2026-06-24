@@ -1,0 +1,11 @@
+schema_version: 1
+id: draw_potion
+name: ひらめきポーション
+image: draw_potion.png
+rarity: uncommon
+usage: combat
+target: self
+description: カードを3枚引く。
+effects:
+  - type: draw_cards
+    amount: 3

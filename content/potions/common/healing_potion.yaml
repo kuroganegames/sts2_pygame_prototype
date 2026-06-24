@@ -1,0 +1,11 @@
+schema_version: 1
+id: healing_potion
+name: 回復ポーション
+image: healing_potion.png
+rarity: common
+usage: any
+target: self
+description: HPを20回復する。
+effects:
+  - type: heal
+    amount: 20

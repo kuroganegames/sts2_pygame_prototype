@@ -2,7 +2,7 @@
 
 ## 共通ルール
 
-カード、敵、キャラクター、レリック、イベントは、原則としてYAMLと画像を同名にします。
+カード、敵、キャラクター、レリック、ポーション、エンシェント、イベントは、原則としてYAMLと画像を同名にします。
 
 ```text
 example_card.yaml
@@ -33,14 +33,58 @@ effects:
   - type: damage
     target: selected_enemy
     amount: 6
-upgrade:
-  name: ストライク+
-  description: 9ダメージを与える。
-  effects:
-    - type: damage
-      target: selected_enemy
-      amount: 9
 ```
+
+## Potion
+
+```yaml
+schema_version: 1
+id: fire_potion
+name: 火炎ポーション
+image: fire_potion.png
+rarity: common
+usage: combat
+target: enemy
+description: 敵1体に20ダメージを与える。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 20
+```
+
+`usage` は以下を想定します。
+
+```text
+combat : 戦闘中のみ
+map    : 戦闘外のみ
+any    : どちらでも使用可能
+```
+
+## Ancient
+
+```yaml
+schema_version: 1
+id: old_smith
+name: 古き鍛冶師
+image: old_smith.png
+act_pool: [1, 2, 3]
+weight: 100
+description: 灰まみれの鍛冶師が、まだ火の入った炉の前でうなずく。
+choices:
+  - id: battle_temper
+    name: 戦火の焼入れ
+    description: 各戦闘開始時、筋力を1得る。
+    effects: []
+    triggers:
+      - event: combat_start
+        effects:
+          - type: apply_status
+            target: self
+            status: strength
+            stacks: 1
+```
+
+`effects` は選択時に即時実行されます。`triggers` は `RunState.ancient_blessings` に保存され、戦闘中の `combat_start` や `turn_start` で発火します。
 
 ## Effect DSL 初期対応
 
@@ -64,22 +108,29 @@ upgrade:
   status: weak
   stacks: 2
 
+- type: gain_potion
+  potion: fire_potion
+
+- type: gain_random_potion
+  rarity_weights:
+    common: 70
+    uncommon: 25
+    rare: 5
+
+- type: upgrade_random_card
+  filter:
+    type: attack
+
+- type: remove_random_card_from_deck
+  filter:
+    rarity: basic
+
 - type: repeat
   times: 2
   effects:
     - type: damage
       target: selected_enemy
       amount: 4
-
-- type: if
-  condition:
-    type: target_has_status
-    target: selected_enemy
-    status: weak
-    stacks_at_least: 1
-  then:
-    - type: draw_cards
-      amount: 1
 ```
 
 ## Map
@@ -98,4 +149,4 @@ upgrade:
 - `weights_by_depth`
 - `encounter_pools`
 
-`constraints` はYAML上に用意済みですが、初期実装では一部未反映です。
+`ancient` ノードタイプを重みに含めると、マップ上にもエンシェント選択ノードが出現します。

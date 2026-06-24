@@ -18,8 +18,9 @@ fixed_layers:
       monster: 100
   8:
     allowed:
-      treasure: 60
+      treasure: 50
       monster: 40
+      ancient: 10
   14:
     allowed:
       rest: 100
@@ -30,30 +31,33 @@ weights_by_depth:
   early:
     layers: [2, 3, 4, 5]
     weights:
-      monster: 70
+      monster: 68
       event: 20
       shop: 5
       treasure: 5
+      ancient: 2
       elite: 0
       rest: 0
   mid:
     layers: [6, 7, 8, 9, 10, 11]
     weights:
-      monster: 40
-      event: 25
+      monster: 36
+      event: 22
       elite: 15
       shop: 10
       treasure: 5
       rest: 5
+      ancient: 7
   late:
     layers: [12, 13]
     weights:
-      monster: 35
-      event: 20
+      monster: 32
+      event: 18
       elite: 15
       shop: 10
       treasure: 5
       rest: 15
+      ancient: 5
 constraints:
   no_same_type_consecutive: [shop, rest, treasure]
   max_elites_per_path: 3

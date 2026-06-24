@@ -18,6 +18,7 @@ enemy_ids = MapGenerator(registry).choose_encounter(run.map_state.act_id, first.
 combat = CombatSystem(registry, run, enemy_ids, RunRng(run.seed).combat)
 assert combat.state.hand
 assert combat.state.alive_enemies()
+assert len(run.player.potions) == run.player.potion_slots
 print("OK")
 print("hand:", [c.card_id for c in combat.state.hand])
 print("enemies:", [(e.enemy_id, e.hp, e.next_move) for e in combat.state.enemies])

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import RunState
+from spirelike.systems.potion_system import PotionSystem
 from spirelike.systems.reward_system import RewardSystem
 
 
@@ -15,10 +16,18 @@ class ShopOffer:
     sold: bool = False
 
 
+@dataclass
+class PotionOffer:
+    potion_id: str
+    price: int
+    sold: bool = False
+
+
 class ShopSystem:
     def __init__(self, registry: ContentRegistry) -> None:
         self.registry = registry
         self.rewards = RewardSystem(registry)
+        self.potions = PotionSystem(registry)
 
     def generate_card_offers(self, run_state: RunState, rng: random.Random, count: int = 5) -> list[ShopOffer]:
         card_ids = self.rewards.card_choices(run_state, rng, choices=count)
@@ -31,4 +40,18 @@ class ShopSystem:
                 "rare": (130, 170),
             }.get(rarity, (50, 80))
             offers.append(ShopOffer(card_id=card_id, price=rng.randint(lo, hi)))
+        return offers
+
+    def generate_potion_offers(self, rng: random.Random, count: int = 3) -> list[PotionOffer]:
+        potion_ids = list(self.registry.potions.keys())
+        rng.shuffle(potion_ids)
+        offers: list[PotionOffer] = []
+        for potion_id in potion_ids[:count]:
+            rarity = self.registry.potion(potion_id).get("rarity", "common")
+            lo, hi = {
+                "common": (35, 55),
+                "uncommon": (60, 85),
+                "rare": (90, 125),
+            }.get(rarity, (45, 80))
+            offers.append(PotionOffer(potion_id=potion_id, price=rng.randint(lo, hi)))
         return offers

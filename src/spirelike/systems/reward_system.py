@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, RelicInstance, RunState
+from spirelike.systems.potion_system import PotionSystem
 
 
 @dataclass
@@ -13,33 +14,42 @@ class RewardBundle:
     gold: int = 0
     card_choices: list[str] = field(default_factory=list)
     relic_id: str | None = None
+    potion_id: str | None = None
     message: str = ""
 
 
 class RewardSystem:
     def __init__(self, registry: ContentRegistry) -> None:
         self.registry = registry
+        self.potions = PotionSystem(registry)
 
     def combat_reward(self, run_state: RunState, node_type: str, rng: random.Random) -> RewardBundle:
         if node_type == "elite":
             gold = rng.randint(25, 40)
             relic = self.random_relic(run_state, rng, allow_boss=False)
+            potion_chance = 0.35
             title = "エリート撃破報酬"
         elif node_type == "boss":
             gold = rng.randint(90, 120)
             relic = self.random_relic(run_state, rng, allow_boss=True)
+            potion_chance = 0.50
             title = "ボス撃破報酬"
         else:
             gold = rng.randint(10, 22)
             relic = None
+            potion_chance = 0.25
             title = "戦闘報酬"
         cards = self.card_choices(run_state, rng, choices=3, force_rare=(node_type == "boss"))
-        return RewardBundle(title=title, gold=gold, card_choices=cards, relic_id=relic)
+        potion = None
+        if self.potions.has_empty_slot(run_state) and rng.random() < potion_chance:
+            potion = self.potions.random_potion(rng)
+        return RewardBundle(title=title, gold=gold, card_choices=cards, relic_id=relic, potion_id=potion)
 
     def treasure_reward(self, run_state: RunState, rng: random.Random) -> RewardBundle:
         relic = self.random_relic(run_state, rng, allow_boss=False)
         gold = rng.randint(20, 45)
-        return RewardBundle(title="宝箱", gold=gold, relic_id=relic, message="宝箱から報酬を得た。")
+        potion = self.potions.random_potion(rng) if self.potions.has_empty_slot(run_state) else None
+        return RewardBundle(title="宝箱", gold=gold, relic_id=relic, potion_id=potion, message="宝箱から報酬を得た。")
 
     def card_choices(
         self,
@@ -111,6 +121,8 @@ class RewardSystem:
             run_state.player.relics.append(RelicInstance(relic_id=reward.relic_id))
             name = self.registry.relic(reward.relic_id).get("name", reward.relic_id)
             run_state.add_message(f"レリック獲得: {name}")
+        if reward.potion_id:
+            self.potions.grant_potion(run_state, reward.potion_id)
 
     def choose_card(self, run_state: RunState, card_id: str) -> None:
         run_state.player.deck.append(CardInstance(card_id=card_id))
