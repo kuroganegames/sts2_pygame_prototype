@@ -7,5 +7,7 @@ type: status
 rarity: special
 cost: 0
 target: none
-description: 何もしない。使用後廃棄される。
+unplayable: true
+ethereal: true
+description: 使用できない。ターン終了時に手札にあるなら廃棄される。
 effects: []

@@ -1,0 +1,22 @@
+schema_version: 1
+id: ghost_guard
+name: 霊体防御
+image: fortify.png
+character: wanderer
+type: skill
+rarity: uncommon
+cost: 1
+target: self
+ethereal: true
+description: 15ブロックを得る。ターン終了時に手札にあるなら廃棄。
+effects:
+  - type: gain_block
+    target: self
+    amount: 15
+upgrade:
+  name: 霊体防御+
+  description: 18ブロックを得る。ターン終了時に手札にあるなら廃棄。
+  effects:
+    - type: gain_block
+      target: self
+      amount: 18

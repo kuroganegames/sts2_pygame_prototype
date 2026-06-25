@@ -15,6 +15,8 @@ class CardInstance:
     upgraded: bool = False
     modifiers: list[str] = field(default_factory=list)
     temporary: bool = False
+    # 戦闘中の一時的なコスト変更、キーワード付与、Afflictionなどの保持先。
+    state: dict[str, Any] = field(default_factory=dict)
     instance_id: str = field(default_factory=new_id)
 
     def clone_for_combat(self) -> "CardInstance":
@@ -23,6 +25,7 @@ class CardInstance:
             upgraded=self.upgraded,
             modifiers=list(self.modifiers),
             temporary=self.temporary,
+            state=dict(self.state),
         )
 
 
@@ -43,6 +46,17 @@ class AncientBlessingInstance:
     ancient_id: str
     choice_id: str
     state: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class PowerInstance:
+    power_id: str
+    source_card_id: str | None = None
+    owner: str = "player"
+    stacks: int = 1
+    upgraded: bool = False
+    state: dict[str, Any] = field(default_factory=dict)
+    instance_id: str = field(default_factory=new_id)
 
 
 @dataclass
@@ -175,8 +189,12 @@ class CombatState:
     hand: list[CardInstance]
     discard_pile: list[CardInstance]
     exhaust_pile: list[CardInstance]
+    limbo: list[CardInstance]
+    powers: list[PowerInstance]
     energy: int
     turn_number: int = 0
+    cards_played_this_turn: int = 0
+    combat_end_fired: bool = False
     outcome: Optional[str] = None
     log: list[str] = field(default_factory=list)
 
