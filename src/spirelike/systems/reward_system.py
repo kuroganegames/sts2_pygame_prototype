@@ -16,6 +16,8 @@ class RewardBundle:
     relic_id: str | None = None
     potion_id: str | None = None
     message: str = ""
+    # セーブ/ロード時にRewardSceneで二重付与しないためのフラグ。
+    base_applied: bool = False
 
 
 class RewardSystem:
@@ -114,6 +116,8 @@ class RewardSystem:
         return weighted[-1][0]
 
     def apply_base_reward(self, run_state: RunState, reward: RewardBundle) -> None:
+        if reward.base_applied:
+            return
         if reward.gold:
             run_state.player.gold += reward.gold
             run_state.add_message(f"ゴールド +{reward.gold}")
@@ -123,6 +127,7 @@ class RewardSystem:
             run_state.add_message(f"レリック獲得: {name}")
         if reward.potion_id:
             self.potions.grant_potion(run_state, reward.potion_id)
+        reward.base_applied = True
 
     def choose_card(self, run_state: RunState, card_id: str) -> None:
         run_state.player.deck.append(CardInstance(card_id=card_id))

@@ -31,6 +31,7 @@ python main.py
 - ActionQueueによる戦闘効果解決
 - Powerカード / Exhaust / Retain / Ethereal / Innate / Unplayable
 - Enchantment / Affliction によるカード1枚単位の修飾
+- 安全地点でのオートセーブ / タイトルからのラン再開
 - ポーションの獲得、購入、戦闘中使用
 - 敵Intentと簡易AI
 - 戦闘報酬、カード追加、レリック獲得、ポーション獲得
@@ -64,6 +65,7 @@ src/spirelike/
   content/    YAMLローダー、ContentRegistry
   core/       RunState、CombatState、RNG、ラン生成
   models/     Dataclass群
+  save/       JSONセーブ / ロード
   scenes/     画面
   systems/    戦闘、効果実行、報酬、マップ生成、ショップなど
   ui/         ボタン、カード表示、ポーション表示、テキスト描画
@@ -102,5 +104,5 @@ effects:
 
 ## 注意
 
-初期プロトタイプなので、UI演出・音・保存/ロード・詳細なカード選択UIなどはまだ簡易実装です。
+初期プロトタイプなので、UI演出・音・戦闘中の保存/ロード・詳細なカード選択UIなどはまだ簡易実装です。
 ただし、コード構造は今後の拡張を前提に分離しています。

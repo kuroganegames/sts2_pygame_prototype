@@ -16,8 +16,11 @@ class SceneManager:
     def change(self, name: str, payload: Optional[dict[str, Any]] = None) -> None:
         if name not in self._factories:
             raise KeyError(f"Scene is not registered: {name}")
+        payload = payload or {}
         self.current_name = name
-        self.current_scene = self._factories[name](self.app, payload or {})
+        self.current_scene = self._factories[name](self.app, payload)
+        if hasattr(self.app, "autosave_if_possible"):
+            self.app.autosave_if_possible(name, payload)
 
     def handle_event(self, event) -> None:
         if self.current_scene is not None:

@@ -13,13 +13,18 @@ class TitleScene(BaseScene):
     def __init__(self, app, payload: dict) -> None:
         super().__init__(app, payload)
         w, h = app.settings.screen_width, app.settings.screen_height
+        has_save = app.save_system.save_exists()
         self.buttons = [
-            Button((w // 2 - 140, h // 2 + 80, 280, 58), "ラン開始", self.start),
-            Button((w // 2 - 140, h // 2 + 154, 280, 58), "終了", self.app.quit),
+            Button((w // 2 - 140, h // 2 + 64, 280, 58), "ラン開始", self.start),
+            Button((w // 2 - 140, h // 2 + 138, 280, 58), "続きから", self.continue_run, enabled=has_save),
+            Button((w // 2 - 140, h // 2 + 212, 280, 58), "終了", self.app.quit),
         ]
 
     def start(self) -> None:
         self.app.scene_manager.change("character_select")
+
+    def continue_run(self) -> None:
+        self.app.continue_saved_run()
 
     def draw(self, surface) -> None:
         surface.fill(colors.BG)
@@ -34,5 +39,7 @@ class TitleScene(BaseScene):
             colors.TEXT,
             rect,
         )
+        if self.app.last_load_error:
+            draw_text(surface, f"ロード失敗: {self.app.last_load_error}", get_font(18), colors.RED, (w // 2, h // 2 + 286), center=True)
         for button in self.buttons:
             button.draw(surface)

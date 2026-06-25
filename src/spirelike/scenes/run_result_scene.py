@@ -12,6 +12,7 @@ class RunResultScene(BaseScene):
         super().__init__(app, payload)
         self.run_state = payload.get("run_state") or app.run_state
         self.result = payload.get("result", "defeat")
+        app.save_system.delete_save()
         self.buttons = [
             Button((500, 500, 280, 58), "タイトルへ", lambda: app.scene_manager.change("title")),
             Button((500, 575, 280, 58), "終了", app.quit),
