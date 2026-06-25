@@ -1,0 +1,9 @@
+schema_version: 1
+id: enchanted_blade
+title: 祝福された刃
+order: 40
+description: 鋭く変じた刃は、もはやただの鉄ではない。
+unlock_conditions:
+  - type: modifier_applied_count_at_least
+    modifier: sharp
+    amount: 1

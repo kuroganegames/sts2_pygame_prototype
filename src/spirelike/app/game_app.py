@@ -7,6 +7,7 @@ import pygame
 from spirelike.app.settings import Settings
 from spirelike.app.scene_manager import SceneManager
 from spirelike.content.loader import ContentLoader
+from spirelike.profile.profile_system import ProfileSystem
 from spirelike.save.save_system import SaveSystem
 from spirelike.scenes.title_scene import TitleScene
 from spirelike.scenes.character_select_scene import CharacterSelectScene
@@ -18,6 +19,11 @@ from spirelike.scenes.rest_scene import RestScene
 from spirelike.scenes.event_scene import EventScene
 from spirelike.scenes.shop_scene import ShopScene
 from spirelike.scenes.card_select_scene import CardSelectScene
+from spirelike.scenes.profile_scene import ProfileScene
+from spirelike.scenes.run_history_scene import RunHistoryScene
+from spirelike.scenes.bestiary_scene import BestiaryScene
+from spirelike.scenes.compendium_scene import CompendiumScene
+from spirelike.scenes.timeline_scene import TimelineScene
 from spirelike.scenes.run_result_scene import RunResultScene
 
 
@@ -41,6 +47,7 @@ class GameApp:
         content_dir = project_root / self.settings.content_dir_name
         self.registry = ContentLoader(content_dir).load()
         self.save_system = SaveSystem(project_root, self.registry)
+        self.profile_system = ProfileSystem(project_root, self.registry)
 
         self.scene_manager = SceneManager(self)
         self._register_scenes()
@@ -59,6 +66,11 @@ class GameApp:
         self.scene_manager.register("event", lambda app, payload: EventScene(app, payload))
         self.scene_manager.register("shop", lambda app, payload: ShopScene(app, payload))
         self.scene_manager.register("card_select", lambda app, payload: CardSelectScene(app, payload))
+        self.scene_manager.register("profile", lambda app, payload: ProfileScene(app, payload))
+        self.scene_manager.register("run_history", lambda app, payload: RunHistoryScene(app, payload))
+        self.scene_manager.register("bestiary", lambda app, payload: BestiaryScene(app, payload))
+        self.scene_manager.register("compendium", lambda app, payload: CompendiumScene(app, payload))
+        self.scene_manager.register("timeline", lambda app, payload: TimelineScene(app, payload))
         self.scene_manager.register("run_result", lambda app, payload: RunResultScene(app, payload))
 
     def autosave_if_possible(self, scene_name: str, payload: dict[str, Any]) -> None:

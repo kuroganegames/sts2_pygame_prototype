@@ -6,6 +6,7 @@ from typing import Any, Optional
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, CombatState, EnemyInstance, PlayerState, RunState
 from spirelike.models.selection import CardSelectionResult
+from spirelike.profile.run_metrics import RunMetricsSystem
 from spirelike.systems.action_queue import ActionQueue
 from spirelike.systems.actions import (
     DrawCardsAction,
@@ -68,13 +69,13 @@ class CombatSystem:
         regular_cards = [card for card in cards if not self.card_rules.has_flag(card, "innate")]
         self.rng.shuffle(regular_cards)
         self.rng.shuffle(innate_cards)
-        # draw_pile は pop() で引くため、天性カードを末尾に置く。
         return regular_cards + innate_cards
 
     def _create_enemy(self, enemy_id: str) -> EnemyInstance:
         enemy_def = self.registry.enemy(enemy_id)
         hp_def = enemy_def.get("hp", {}) or {}
         hp = self.rng.randint(int(hp_def.get("min", 10)), int(hp_def.get("max", 10)))
+        RunMetricsSystem.record_enemy_seen(self.run_state, enemy_id)
         return EnemyInstance(
             enemy_id=enemy_id,
             name=str(enemy_def.get("name", enemy_id)),
@@ -123,6 +124,7 @@ class CombatSystem:
                 self.log("捨て札をシャッフル")
             card = self.state.draw_pile.pop()
             self.add_to_hand(card)
+            RunMetricsSystem.record_card_seen(self.run_state, card.card_id)
             context = {
                 "source": self.run_state.player,
                 "target": self.run_state.player,
@@ -206,6 +208,7 @@ class CombatSystem:
         self.state.energy -= spent_energy
         self.move_card(card, "hand", "limbo")
         self.state.cards_played_this_turn += 1
+        RunMetricsSystem.record_card_played(self.run_state, card.card_id)
 
         context = {
             "source": self.run_state.player,
@@ -386,6 +389,7 @@ class CombatSystem:
     def _remove_dead_enemies(self) -> None:
         for enemy in self.state.enemies:
             if enemy.hp <= 0 and enemy.next_move is not None:
+                RunMetricsSystem.record_enemy_defeated(self.run_state, enemy.enemy_id)
                 self.log(f"{enemy.name}を倒した")
                 enemy.next_move = None
 
@@ -427,7 +431,6 @@ class CombatSystem:
     def fire_trigger_event(self, event_name: str, event_context: dict[str, Any] | None = None) -> None:
         event_context = event_context or {}
         player = self.run_state.player
-        # Relic triggers
         for relic in player.relics:
             relic_def = self.registry.relic(relic.relic_id)
             for trigger in relic_def.get("triggers", []) or []:
@@ -440,7 +443,6 @@ class CombatSystem:
                 if self.state.pending_selection is not None:
                     return
 
-        # Ancient blessing triggers
         ancient_system = AncientSystem(self.registry)
         for blessing in self.run_state.ancient_blessings:
             if blessing.ancient_id not in self.registry.ancients:
@@ -465,7 +467,6 @@ class CombatSystem:
                 if self.state.pending_selection is not None:
                     return
 
-        # Power triggers
         for power in list(self.state.powers):
             if power.owner != "player":
                 continue
@@ -486,7 +487,6 @@ class CombatSystem:
                 if self.state.pending_selection is not None:
                     return
 
-        # Card modifier triggers: cardに紐づくイベントのみ、そのカードのmodifierを確認する。
         card = event_context.get("card")
         if card is not None:
             self.card_modifier_system.fire_card_modifier_event(self, event_name, card, event_context)
@@ -496,6 +496,5 @@ class CombatSystem:
         if not self.action_queue.is_resolving:
             self.resolve_actions()
 
-    # 旧名互換。既存の拡張やテストから呼ばれても動くようにしておく。
     def fire_relic_event(self, event_name: str) -> None:
         self.fire_trigger_event(event_name)

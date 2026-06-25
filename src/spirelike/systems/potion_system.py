@@ -5,6 +5,7 @@ from typing import Optional
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import EnemyInstance, PotionInstance, RunState
+from spirelike.profile.run_metrics import RunMetricsSystem
 
 
 class PotionSystem:
@@ -26,6 +27,7 @@ class PotionSystem:
             run_state.add_message("ポーションスロットが満杯")
             return False
         run_state.player.potions[slot] = PotionInstance(potion_id=potion_id)
+        RunMetricsSystem.record_potion_acquired(run_state, potion_id)
         name = self.registry.potion(potion_id).get("name", potion_id)
         run_state.add_message(f"ポーション獲得: {name}")
         return True
@@ -112,6 +114,7 @@ class PotionSystem:
         }
         combat_system.executor.execute_many(potion_def.get("effects", []), context)
         combat_system.resolve_actions()
+        RunMetricsSystem.record_potion_used(run_state, potion.potion_id)
         run_state.player.potions[slot_index] = None
         combat_system._remove_dead_enemies()
         combat_system._check_victory_or_defeat()
@@ -130,6 +133,7 @@ class PotionSystem:
             return False
         executor.execute_many(run_state, potion_def.get("effects", []))
         name = potion_def.get("name", potion.potion_id)
+        RunMetricsSystem.record_potion_used(run_state, potion.potion_id)
         run_state.player.potions[slot_index] = None
         run_state.add_message(f"{name} を使用")
         return True

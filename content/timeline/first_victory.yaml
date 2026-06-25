@@ -1,0 +1,8 @@
+schema_version: 1
+id: first_victory
+title: 最初の踏破
+order: 20
+description: 旅人は最初の塔を越えた。しかし、塔はまだ静かに呼吸している。
+unlock_conditions:
+  - type: victories_at_least
+    amount: 1

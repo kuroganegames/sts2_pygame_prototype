@@ -1,0 +1,8 @@
+schema_version: 1
+id: first_steps
+title: 最初の足跡
+order: 10
+description: 初めて塔へ踏み入れた記録。
+unlock_conditions:
+  - type: runs_started_at_least
+    amount: 1
