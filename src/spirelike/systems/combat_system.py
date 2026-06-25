@@ -7,6 +7,7 @@ from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, CombatState, EnemyInstance, PlayerState, RunState
 from spirelike.models.selection import CardSelectionResult
 from spirelike.profile.run_metrics import RunMetricsSystem
+from spirelike.save.combat_serializer import combat_snapshot_from_dict, combat_snapshot_to_dict
 from spirelike.systems.action_queue import ActionQueue
 from spirelike.systems.actions import (
     DrawCardsAction,
@@ -33,6 +34,7 @@ class CombatSystem:
         run_state: RunState,
         enemy_ids: list[str],
         rng: random.Random,
+        snapshot: dict[str, Any] | None = None,
     ) -> None:
         self.registry = registry
         self.run_state = run_state
@@ -43,6 +45,11 @@ class CombatSystem:
         self.card_operation_system = CardOperationSystem(registry, rng)
         self.action_queue = ActionQueue()
         self.draw_per_turn = 5
+        self.executor = EffectExecutor(self)
+
+        if snapshot is not None:
+            self._restore_from_snapshot(snapshot)
+            return
 
         enemies = [self._create_enemy(enemy_id) for enemy_id in enemy_ids]
         draw_pile = self._build_combat_draw_pile()
@@ -57,11 +64,33 @@ class CombatSystem:
             powers=[],
             energy=run_state.player.base_energy,
         )
-        self.executor = EffectExecutor(self)
         self.choose_enemy_moves()
         self.enqueue_action(TriggerEventAction("combat_start", {"owner": "player"}))
         self.resolve_actions()
         self.start_player_turn(first_turn=True)
+
+    def _restore_from_snapshot(self, snapshot: dict[str, Any]) -> None:
+        self.state, restored_rng = combat_snapshot_from_dict(snapshot, self.run_state)
+        self.rng = restored_rng
+        self.card_operation_system = CardOperationSystem(self.registry, self.rng)
+        self.state.pending_selection = None
+        self.log("戦闘を再開")
+
+    def to_snapshot(self) -> dict[str, Any]:
+        return combat_snapshot_to_dict(self)
+
+    def can_save_combat(self) -> tuple[bool, str]:
+        if self.state.outcome is not None:
+            return False, "戦闘終了処理中です"
+        if self.state.pending_selection is not None:
+            return False, "カード選択中は保存できません"
+        if self.action_queue.is_resolving:
+            return False, "効果解決中は保存できません"
+        if self.action_queue.has_pending():
+            return False, "未解決Actionがあります"
+        if self.state.limbo:
+            return False, "カード解決中は保存できません"
+        return True, ""
 
     def _build_combat_draw_pile(self) -> list[CardInstance]:
         cards = [card.clone_for_combat() for card in self.run_state.player.deck]

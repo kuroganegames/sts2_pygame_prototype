@@ -153,6 +153,7 @@ class EnemyInstance:
     next_move: Optional[str] = None
     last_move: Optional[str] = None
     move_index: int = 0
+    instance_id: str = field(default_factory=new_id)
 
     def is_alive(self) -> bool:
         return self.hp > 0

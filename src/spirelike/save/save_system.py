@@ -16,7 +16,7 @@ from spirelike.save.serializer import (
     run_state_from_dict,
     run_state_to_dict,
 )
-from spirelike.save.validation import validate_loaded_run
+from spirelike.save.validation import validate_combat_snapshot, validate_loaded_run
 
 
 class SaveSystemError(RuntimeError):
@@ -65,6 +65,10 @@ class SaveSystem:
         scene_payload = dict(data.get("scene_payload", {}) or {})
         run_state = run_state_from_dict(data["run"])
         warnings = validate_loaded_run(run_state, self.registry)
+
+        if scene_name == "combat" and scene_payload.get("combat_snapshot"):
+            warnings.extend(validate_combat_snapshot(scene_payload["combat_snapshot"], self.registry))
+
         for warning in warnings[-5:]:
             run_state.add_message(warning)
 
@@ -109,5 +113,12 @@ class SaveSystem:
                 "node_id": payload.get("node_id"),
                 "reward": reward_bundle_to_dict(payload.get("reward")),
                 "after_boss": bool(payload.get("after_boss", False)),
+            }
+        if scene_name == "combat":
+            return {
+                "node_id": payload.get("node_id"),
+                "node_type": payload.get("node_type", "monster"),
+                "enemy_ids": list(payload.get("enemy_ids", []) or []),
+                "combat_snapshot": payload.get("combat_snapshot"),
             }
         return {}

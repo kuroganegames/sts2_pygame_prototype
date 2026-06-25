@@ -26,8 +26,15 @@ class CombatScene(BaseScene):
         self.node_id = payload["node_id"]
         self.node_type = payload.get("node_type", "monster")
         self.enemy_ids = payload.get("enemy_ids", [])
+        self.combat_snapshot = payload.get("combat_snapshot")
         rngs = RunRng(self.run_state.seed + self.run_state.floor)
-        self.combat = CombatSystem(app.registry, self.run_state, self.enemy_ids, rngs.combat)
+        self.combat = CombatSystem(
+            app.registry,
+            self.run_state,
+            self.enemy_ids,
+            rngs.combat,
+            snapshot=self.combat_snapshot,
+        )
         self.potion_system = PotionSystem(app.registry)
         self.selection_system = CardSelectionSystem(app.registry)
         self.selection_view: CardSelectionView | None = None
@@ -37,13 +44,33 @@ class CombatScene(BaseScene):
         self.card_rects: dict[str, pygame.Rect] = {}
         self.enemy_rects: dict[str, pygame.Rect] = {}
         self.potion_rects: dict[int, pygame.Rect] = {}
-        self.buttons = [Button((1110, 610, 140, 52), "ターン終了", self.end_turn)]
+        self.buttons = [
+            Button((910, 610, 180, 52), "保存して終了", self.save_and_quit),
+            Button((1110, 610, 140, 52), "ターン終了", self.end_turn),
+        ]
 
     def end_turn(self) -> None:
         self.selected_card = None
         self.selected_potion_slot = None
         self.combat.end_player_turn()
         self._after_state_change()
+
+    def save_and_quit(self) -> None:
+        ok, reason = self.combat.can_save_combat()
+        if not ok:
+            self.combat.log(reason)
+            return
+        self.app.save_system.save_run(
+            self.run_state,
+            current_scene="combat",
+            scene_payload={
+                "node_id": self.node_id,
+                "node_type": self.node_type,
+                "enemy_ids": self.enemy_ids,
+                "combat_snapshot": self.combat.to_snapshot(),
+            },
+        )
+        self.app.scene_manager.change("title")
 
     def handle_event(self, event) -> None:
         if self.combat.state.pending_selection is not None:

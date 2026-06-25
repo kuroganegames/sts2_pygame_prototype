@@ -70,3 +70,49 @@ def validate_loaded_run(run_state: RunState, registry: ContentRegistry) -> list[
     }
 
     return warnings
+
+
+def validate_combat_snapshot(snapshot: dict, registry: ContentRegistry) -> list[str]:
+    warnings: list[str] = []
+    if not isinstance(snapshot, dict):
+        raise SaveValidationError("Combat snapshot must be a mapping")
+
+    state = snapshot.get("state")
+    if not isinstance(state, dict):
+        raise SaveValidationError("Combat snapshot has no state")
+
+    known_statuses = set(registry.statuses)
+    for enemy in state.get("enemies", []) or []:
+        enemy_id = enemy.get("enemy_id")
+        if enemy_id not in registry.enemies:
+            raise SaveValidationError(f"Unknown enemy in combat save: {enemy_id}")
+        enemy["statuses"] = {
+            status: stacks
+            for status, stacks in (enemy.get("statuses", {}) or {}).items()
+            if status in known_statuses
+        }
+
+    for zone in ["draw_pile", "hand", "discard_pile", "exhaust_pile", "limbo"]:
+        cleaned_cards = []
+        for card in state.get(zone, []) or []:
+            card_id = card.get("card_id")
+            if card_id not in registry.cards:
+                warnings.append(f"Removed missing combat card from {zone}: {card_id}")
+                continue
+            card["modifiers"] = [
+                modifier
+                for modifier in card.get("modifiers", []) or []
+                if (modifier.get("modifier_id") if isinstance(modifier, dict) else str(modifier)) in registry.card_modifiers
+            ]
+            cleaned_cards.append(card)
+        state[zone] = cleaned_cards
+
+    cleaned_powers = []
+    for power in state.get("powers", []) or []:
+        source_card_id = power.get("source_card_id")
+        if source_card_id and source_card_id not in registry.cards:
+            warnings.append(f"Removed power with missing source card: {source_card_id}")
+            continue
+        cleaned_powers.append(power)
+    state["powers"] = cleaned_powers
+    return warnings
