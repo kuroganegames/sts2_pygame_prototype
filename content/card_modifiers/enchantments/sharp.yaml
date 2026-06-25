@@ -1,0 +1,16 @@
+schema_version: 1
+id: sharp
+name: 鋭利
+image: sharp.png
+type: enchantment
+duration: run
+stacking: stack
+max_stacks: 3
+description: このカードの攻撃ダメージを3増やす。
+valid_targets:
+  card_types:
+    - attack
+modifiers:
+  - event: calculate_card_damage
+    operation: add
+    value: 3

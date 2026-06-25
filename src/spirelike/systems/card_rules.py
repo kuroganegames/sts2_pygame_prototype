@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance
+from spirelike.systems.card_modifier_system import CardModifierSystem
 
 
 CARD_FLAGS = {"exhaust", "retain", "ethereal", "innate", "unplayable"}
@@ -10,6 +11,7 @@ CARD_FLAGS = {"exhaust", "retain", "ethereal", "innate", "unplayable"}
 class CardRules:
     def __init__(self, registry: ContentRegistry) -> None:
         self.registry = registry
+        self.card_modifiers = CardModifierSystem(registry)
 
     def has_flag(self, card: CardInstance, flag: str) -> bool:
         if flag in card.state:
@@ -18,16 +20,22 @@ class CardRules:
         card_def = self.registry.card(card.card_id)
         upgrade = card_def.get("upgrade", {}) or {}
 
+        result = False
         if card.upgraded and flag in upgrade:
-            return bool(upgrade[flag])
+            result = bool(upgrade[flag])
+        elif flag in card_def:
+            result = bool(card_def[flag])
+        else:
+            keywords = set(card_def.get("keywords", []) or [])
+            if card.upgraded:
+                keywords.update(upgrade.get("keywords", []) or [])
+            result = flag in keywords
 
-        if flag in card_def:
-            return bool(card_def[flag])
-
-        keywords = set(card_def.get("keywords", []) or [])
-        if card.upgraded:
-            keywords.update(upgrade.get("keywords", []) or [])
-        return flag in keywords
+        if self.card_modifiers.flag_removed(card, flag):
+            return False
+        if self.card_modifiers.flag_added(card, flag):
+            return True
+        return result
 
     def is_power(self, card: CardInstance) -> bool:
         return self.registry.card(card.card_id).get("type") == "power"

@@ -25,9 +25,25 @@ moves:
       - type: damage
         target: player
         amount: 7
+  curse_touch:
+    name: 呪いの接触
+    intent: debuff
+    weight: 20
+    effects:
+      - type: apply_card_modifier
+        modifier: heavy
+        selector:
+          zones:
+            - hand
+          count: 1
+          mode: random
+          filter:
+            allow_status: false
+            allow_curse: false
 ai:
   type: pattern
   pattern:
     - chant
     - strike
+    - curse_touch
     - strike

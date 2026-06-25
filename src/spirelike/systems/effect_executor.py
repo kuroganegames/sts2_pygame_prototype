@@ -11,6 +11,7 @@ from spirelike.systems.actions import (
     GainBlockAction,
     GainEnergyAction,
     HealAction,
+    LoseHpAction,
     RequestCardSelectionAction,
 )
 from spirelike.systems.card_operation_system import CardOperationSystem
@@ -24,6 +25,9 @@ SELECTION_EFFECTS = {
     "exhaust_cards": "exhaust",
     "discard_cards": "discard",
     "fetch_card_to_hand": "fetch_to_hand",
+    "apply_card_modifier": "apply_modifier",
+    "remove_card_modifier": "remove_modifier",
+    "cleanse_card_modifiers": "cleanse_modifiers",
 }
 
 
@@ -32,12 +36,18 @@ class EffectExecutor:
         self.combat = combat
 
     def execute_many(self, effects: list[dict[str, Any]], context: dict[str, Any]) -> None:
-        for effect in effects or []:
-            self.execute(effect, context)
+        effects = effects or []
+        for index, effect in enumerate(effects):
+            self.execute(effect, context, remaining_effects=effects[index + 1 :])
             if self.combat.state.outcome == "defeat" or self.combat.state.pending_selection is not None:
                 break
 
-    def execute(self, effect: dict[str, Any], context: dict[str, Any]) -> None:
+    def execute(
+        self,
+        effect: dict[str, Any],
+        context: dict[str, Any],
+        remaining_effects: list[dict[str, Any]] | None = None,
+    ) -> None:
         effect_type = effect.get("type")
         if effect_type == "damage":
             self._damage(effect, context)
@@ -54,12 +64,17 @@ class EffectExecutor:
         elif effect_type == "heal":
             amount = self.resolve_amount(effect.get("amount", 0), context)
             self.combat.enqueue_action(HealAction(amount))
+        elif effect_type == "lose_hp":
+            amount = self.resolve_amount(effect.get("amount", 0), context)
+            targets = self.resolve_targets(effect.get("target", "player"), context)
+            for target in targets:
+                self.combat.enqueue_action(LoseHpAction(target=target, amount=amount))
         elif effect_type == "add_card_to_draw_pile":
             self._add_card_to_pile(effect, context, "draw")
         elif effect_type == "add_card_to_hand":
             self._add_card_to_pile(effect, context, "hand")
         elif effect_type in SELECTION_EFFECTS:
-            self._selection_operation(effect, context, SELECTION_EFFECTS[effect_type])
+            self._selection_operation(effect, context, SELECTION_EFFECTS[effect_type], remaining_effects or [])
         elif effect_type == "repeat":
             times = self.resolve_amount(effect.get("times", 1), context)
             for _ in range(max(0, times)):
@@ -79,6 +94,7 @@ class EffectExecutor:
         effect: dict[str, Any],
         context: dict[str, Any],
         operation_type: str,
+        remaining_effects: list[dict[str, Any]],
     ) -> None:
         selector = effect.get("selector", {}) or {}
         zones = selector.get("zones") or selector.get("zone") or ["master_deck"]
@@ -100,7 +116,7 @@ class EffectExecutor:
             allow_skip=allow_skip,
             filter=selector.get("filter", {}) or {},
             operation=operation,
-            context=context,
+            context={"effect_context": context, "remaining_effects": list(remaining_effects or [])},
         )
 
         if selector.get("player_choice", False):
@@ -114,7 +130,11 @@ class EffectExecutor:
         )
         if not candidates:
             return
-        selected = self.combat.rng.sample(candidates, k=min(count, len(candidates)))
+        mode = selector.get("mode", "random")
+        if mode == "all":
+            selected = candidates[:count] if count else candidates
+        else:
+            selected = self.combat.rng.sample(candidates, k=min(count, len(candidates)))
         result = CardSelectionResult(
             request_id=request.request_id,
             selected_instance_ids=[candidate.card.instance_id for candidate in selected],
@@ -134,6 +154,9 @@ class EffectExecutor:
             "exhaust": "カード廃棄",
             "discard": "カード破棄",
             "fetch_to_hand": "カード回収",
+            "apply_modifier": "カード修飾",
+            "remove_modifier": "修飾解除",
+            "cleanse_modifiers": "修飾浄化",
         }.get(operation_type, "カード選択")
 
     def _default_message(self, operation_type: str) -> str:
@@ -144,6 +167,9 @@ class EffectExecutor:
             "exhaust": "廃棄するカードを選んでください。",
             "discard": "捨てるカードを選んでください。",
             "fetch_to_hand": "手札に加えるカードを選んでください。",
+            "apply_modifier": "修飾するカードを選んでください。",
+            "remove_modifier": "修飾を解除するカードを選んでください。",
+            "cleanse_modifiers": "浄化するカードを選んでください。",
         }.get(operation_type, "カードを選んでください。")
 
     def _damage(self, effect: dict[str, Any], context: dict[str, Any]) -> None:
@@ -156,6 +182,7 @@ class EffectExecutor:
                     target=target,
                     amount=amount,
                     card_def=context.get("card_def", {}),
+                    card=context.get("card"),
                 )
             )
 
@@ -163,7 +190,7 @@ class EffectExecutor:
         amount = self.resolve_amount(effect.get("amount", 0), context)
         targets = self.resolve_targets(effect.get("target", "self"), context)
         for target in targets:
-            self.combat.enqueue_action(GainBlockAction(target=target, amount=amount))
+            self.combat.enqueue_action(GainBlockAction(target=target, amount=amount, card=context.get("card")))
 
     def _apply_status(self, effect: dict[str, Any], context: dict[str, Any]) -> None:
         status_id = effect.get("status")
@@ -223,6 +250,9 @@ class EffectExecutor:
                     return self.combat.power_system.power_stacks(self.combat, str(power_id))
                 power = context.get("power")
                 return int(getattr(power, "stacks", 0))
+            if value_type == "modifier_stacks":
+                modifier = context.get("modifier")
+                return int(getattr(modifier, "stacks", 0))
             if value_type == "percent_max_hp":
                 percent = float(value.get("percent", 0))
                 return int(self.combat.state.run_state.player.max_hp * percent / 100)

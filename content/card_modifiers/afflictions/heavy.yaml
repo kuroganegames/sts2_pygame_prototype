@@ -1,0 +1,16 @@
+schema_version: 1
+id: heavy
+name: 重圧
+image: heavy.png
+type: affliction
+duration: combat
+stacking: unique
+description: このカードのコストを1増やす。
+valid_targets:
+  exclude_card_types:
+    - status
+    - curse
+modifiers:
+  - event: calculate_card_cost
+    operation: add
+    value: 1

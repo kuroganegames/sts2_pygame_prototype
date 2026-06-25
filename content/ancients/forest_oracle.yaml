@@ -22,9 +22,10 @@ choices:
           player_choice: true
   - id: sharpen_instinct
     name: 本能を研ぐ
-    description: 攻撃カードを1枚選んで強化する。
+    description: 攻撃カードを1枚選び、鋭利を付与する。
     effects:
-      - type: upgrade_card
+      - type: apply_card_modifier
+        modifier: sharp
         selector:
           zones:
             - master_deck
@@ -33,7 +34,6 @@ choices:
           filter:
             types:
               - attack
-            can_upgrade: true
   - id: take_brew
     name: 小瓶を受け取る
     description: ランダムなポーションを1つ得る。

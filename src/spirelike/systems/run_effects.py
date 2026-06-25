@@ -14,6 +14,9 @@ SELECTION_RUN_EFFECTS = {
     "upgrade_card": "upgrade",
     "remove_card_from_deck": "remove",
     "transform_card": "transform",
+    "apply_card_modifier": "apply_modifier",
+    "remove_card_modifier": "remove_modifier",
+    "cleanse_card_modifiers": "cleanse_modifiers",
 }
 
 
@@ -135,7 +138,11 @@ class RunEffectExecutor:
         candidates = CardSelectionSystem(self.registry).collect_candidates(run_state, request, None)
         if not candidates:
             return True
-        selected = self.rng.sample(candidates, k=min(count, len(candidates)))
+        mode = selector.get("mode", "random")
+        if mode == "all":
+            selected = candidates[:count] if count else candidates
+        else:
+            selected = self.rng.sample(candidates, k=min(count, len(candidates)))
         result = CardSelectionResult(
             request_id=request.request_id,
             selected_instance_ids=[candidate.card.instance_id for candidate in selected],
@@ -148,6 +155,9 @@ class RunEffectExecutor:
             "upgrade": "カード強化",
             "remove": "カード削除",
             "transform": "カード変化",
+            "apply_modifier": "カード修飾",
+            "remove_modifier": "修飾解除",
+            "cleanse_modifiers": "修飾浄化",
         }.get(operation_type, "カード選択")
 
     def _default_message(self, operation_type: str) -> str:
@@ -155,6 +165,9 @@ class RunEffectExecutor:
             "upgrade": "強化するカードを選んでください。",
             "remove": "削除するカードを選んでください。",
             "transform": "変化させるカードを選んでください。",
+            "apply_modifier": "修飾するカードを選んでください。",
+            "remove_modifier": "修飾を解除するカードを選んでください。",
+            "cleanse_modifiers": "浄化するカードを選んでください。",
         }.get(operation_type, "カードを選んでください。")
 
     def _card_candidates(

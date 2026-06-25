@@ -2,7 +2,7 @@
 
 Pygameで作った、Slay the Spire 2風のシングルプレイ・ローグライクデッキビルダー初期実装です。
 
-公式素材や公式カード名は含めていません。カード、敵、キャラクター、レリック、ポーション、エンシェント、イベント、マップ生成ルールをYAMLで管理するためのプロトタイプです。
+公式素材や公式カード名は含めていません。カード、敵、キャラクター、レリック、ポーション、エンシェント、カード修飾、イベント、マップ生成ルールをYAMLで管理するためのプロトタイプです。
 
 ## 起動方法
 
@@ -30,6 +30,7 @@ python main.py
 - カード使用、ダメージ、ブロック、ドロー、状態付与
 - ActionQueueによる戦闘効果解決
 - Powerカード / Exhaust / Retain / Ethereal / Innate / Unplayable
+- Enchantment / Affliction によるカード1枚単位の修飾
 - ポーションの獲得、購入、戦闘中使用
 - 敵Intentと簡易AI
 - 戦闘報酬、カード追加、レリック獲得、ポーション獲得
@@ -39,20 +40,20 @@ python main.py
 
 ## データ追加ルール
 
-原則として、カード・敵・キャラ・レリック・ポーション・エンシェント・イベントは `id` と同じファイル名にします。
+原則として、カード・敵・キャラ・レリック・ポーション・エンシェント・カード修飾・イベントは `id` と同じファイル名にします。
 
 例：
 
 ```text
-content/potions/common/fire_potion.yaml
-content/potions/common/fire_potion.png
+content/card_modifiers/enchantments/sharp.yaml
+content/card_modifiers/enchantments/sharp.png
 ```
 
 YAML内にも同じIDを書きます。
 
 ```yaml
-id: fire_potion
-image: fire_potion.png
+id: sharp
+image: sharp.png
 ```
 
 ## 主なフォルダ
@@ -74,6 +75,7 @@ content/
   relics/
   potions/
   ancients/
+  card_modifiers/
   statuses/
   maps/
   events/
@@ -89,8 +91,13 @@ effects:
   - type: gain_block
     target: self
     amount: 5
-  - type: gain_potion
-    potion: fire_potion
+  - type: apply_card_modifier
+    modifier: sharp
+    selector:
+      zones:
+        - master_deck
+      count: 1
+      player_choice: true
 ```
 
 ## 注意

@@ -17,6 +17,17 @@ choices:
     effects:
       - type: gain_potion
         potion: healing_potion
+  - id: purify
+    text: カードを清める。カード1枚のAfflictionを取り除く。
+    effects:
+      - type: cleanse_card_modifiers
+        modifier_type: affliction
+        selector:
+          zones:
+            - master_deck
+          count: 1
+          player_choice: true
+          allow_skip: true
   - id: coin
     text: 底の硬貨を拾う。30ゴールドを得る。
     effects:

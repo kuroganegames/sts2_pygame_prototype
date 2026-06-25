@@ -15,6 +15,7 @@ from spirelike.systems.actions import (
     TriggerEventAction,
 )
 from spirelike.systems.ancient_system import AncientSystem
+from spirelike.systems.card_modifier_system import CardModifierSystem
 from spirelike.systems.card_operation_system import CardOperationSystem
 from spirelike.systems.card_rules import CardRules
 from spirelike.systems.effect_executor import EffectExecutor
@@ -35,6 +36,7 @@ class CombatSystem:
         self.registry = registry
         self.run_state = run_state
         self.rng = rng
+        self.card_modifier_system = CardModifierSystem(registry)
         self.card_rules = CardRules(registry)
         self.power_system = PowerSystem(registry)
         self.card_operation_system = CardOperationSystem(registry, rng)
@@ -166,8 +168,12 @@ class CombatSystem:
 
     def get_card_cost(self, card: CardInstance):
         if "cost" in card.state:
-            return card.state["cost"]
-        return self.registry.card_cost(card.card_id, card.upgraded)
+            base_cost = card.state["cost"]
+        else:
+            base_cost = self.registry.card_cost(card.card_id, card.upgraded)
+        if isinstance(base_cost, str):
+            return base_cost
+        return self.card_modifier_system.modify_card_cost(self, card, int(base_cost))
 
     def play_card(self, card: CardInstance, target: Optional[EnemyInstance] = None) -> bool:
         if card not in self.state.hand or self.state.outcome is not None:
@@ -222,6 +228,16 @@ class CombatSystem:
             return
         self.state.pending_selection = None
         self.card_operation_system.apply_result(self.run_state, request, result, combat=self)
+
+        effect_context = request.context.get("effect_context", {}) if request.context else {}
+        remaining_effects = request.context.get("remaining_effects", []) if request.context else []
+        if remaining_effects and self.state.pending_selection is None:
+            self.executor.execute_many(remaining_effects, effect_context)
+
+        card = effect_context.get("card") if isinstance(effect_context, dict) else None
+        if self.state.pending_selection is None and card is not None and card in self.state.limbo:
+            self.enqueue_action(TriggerEventAction("card_resolved", effect_context))
+            self.enqueue_action(FinishCardUseAction(card=card, context=effect_context))
         self.resolve_actions()
 
     def move_card(self, card: CardInstance, from_zone: str, to_zone: str) -> bool:
@@ -310,12 +326,19 @@ class CombatSystem:
                 return move_id
         return candidates[-1][0]
 
-    def deal_damage(self, source, target, amount: int, card_def: Optional[dict[str, Any]] = None) -> int:
+    def deal_damage(
+        self,
+        source,
+        target,
+        amount: int,
+        card_def: Optional[dict[str, Any]] = None,
+        card: CardInstance | None = None,
+    ) -> int:
         if target is None or amount <= 0:
             return 0
         if hasattr(target, "is_alive") and not target.is_alive():
             return 0
-        amount = self._calculate_damage(source, target, amount, card_def or {})
+        amount = self._calculate_damage(source, target, amount, card_def or {}, card)
         blocked = min(getattr(target, "block", 0), amount)
         target.block = max(0, getattr(target, "block", 0) - blocked)
         actual = amount - blocked
@@ -327,8 +350,10 @@ class CombatSystem:
             self.log(f"{target.name}に{actual}ダメージ")
         return actual
 
-    def _calculate_damage(self, source, target, amount: int, card_def: dict[str, Any]) -> int:
+    def _calculate_damage(self, source, target, amount: int, card_def: dict[str, Any], card: CardInstance | None = None) -> int:
         result = int(amount)
+        if card is not None:
+            result = self.card_modifier_system.modify_card_damage(self, card, result)
         source_statuses = getattr(source, "statuses", {})
         target_statuses = getattr(target, "statuses", {})
         if card_def.get("type") == "attack":
@@ -372,6 +397,7 @@ class CombatSystem:
             if not self.state.combat_end_fired:
                 self.state.combat_end_fired = True
                 self.enqueue_action(TriggerEventAction("combat_end", {"owner": "player"}))
+                self.card_modifier_system.cleanup_combat_modifiers(self.run_state)
             if self.state.outcome != "victory":
                 self.state.outcome = "victory"
                 self.log("勝利")
@@ -459,6 +485,13 @@ class CombatSystem:
                 self.executor.execute_many(trigger.get("effects", []), context)
                 if self.state.pending_selection is not None:
                     return
+
+        # Card modifier triggers: cardに紐づくイベントのみ、そのカードのmodifierを確認する。
+        card = event_context.get("card")
+        if card is not None:
+            self.card_modifier_system.fire_card_modifier_event(self, event_name, card, event_context)
+            if self.state.pending_selection is not None:
+                return
 
         if not self.action_queue.is_resolving:
             self.resolve_actions()
