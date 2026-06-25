@@ -32,6 +32,7 @@ python main.py
 - Powerカード / Exhaust / Retain / Ethereal / Innate / Unplayable
 - Enchantment / Affliction によるカード1枚単位の修飾
 - 安全地点でのオートセーブ / タイトルからのラン再開
+- 戦闘中の安定状態での「保存して終了」/ CombatSnapshot再開
 - profile.jsonによるラン履歴 / 敵図鑑 / コレクション / Timeline記録
 - ポーションの獲得、購入、戦闘中使用
 - 敵Intentと簡易AI
@@ -69,7 +70,7 @@ src/spirelike/
   core/       RunState、CombatState、RNG、ラン生成
   models/     Dataclass群
   profile/    profile.json、ラン履歴、図鑑、Timeline
-  save/       JSONセーブ / ロード
+  save/       JSONセーブ / ロード / CombatSnapshot
   scenes/     画面
   systems/    戦闘、効果実行、報酬、マップ生成、ショップなど
   ui/         ボタン、カード表示、ポーション表示、テキスト描画
@@ -109,5 +110,5 @@ effects:
 
 ## 注意
 
-初期プロトタイプなので、UI演出・音・戦闘中の保存/ロード・詳細なカード選択UIなどはまだ簡易実装です。
+初期プロトタイプなので、UI演出・音・ActionQueue途中状態の保存・カード選択Overlay中の保存などはまだ簡易または未対応です。
 ただし、コード構造は今後の拡張を前提に分離しています。
