@@ -5,6 +5,7 @@ import time
 from spirelike.content.loader import ContentRegistry
 from spirelike.core.rng import RunRng
 from spirelike.models.entities import CardInstance, RelicInstance, PlayerState, RunState
+from spirelike.profile.run_metrics import RunMetricsSystem
 from spirelike.systems.map_generator import MapGenerator
 
 
@@ -36,5 +37,6 @@ def create_run(registry: ContentRegistry, character_id: str, seed: int | None = 
         player=player,
         map_state=map_state,
     )
+    RunMetricsSystem.ensure(run)
     run.add_message(f"Seed: {seed}")
     return run

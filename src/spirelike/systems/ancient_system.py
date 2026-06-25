@@ -5,6 +5,7 @@ from typing import Any
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import AncientBlessingInstance, RunState
+from spirelike.profile.run_metrics import RunMetricsSystem
 
 
 class AncientSystem:
@@ -34,14 +35,18 @@ class AncientSystem:
         weighted = [(ancient, float(ancient.get("weight", 100))) for ancient in candidates]
         total = sum(max(0.0, weight) for _, weight in weighted)
         if total <= 0:
-            return candidates[0]
-        roll = rng.uniform(0, total)
-        upto = 0.0
-        for ancient, weight in weighted:
-            upto += max(0.0, weight)
-            if roll <= upto:
-                return ancient
-        return candidates[-1]
+            selected = candidates[0]
+        else:
+            roll = rng.uniform(0, total)
+            upto = 0.0
+            selected = candidates[-1]
+            for ancient, weight in weighted:
+                upto += max(0.0, weight)
+                if roll <= upto:
+                    selected = ancient
+                    break
+        RunMetricsSystem.record_ancient_seen(run_state, str(selected.get("id")))
+        return selected
 
     def apply_choice(self, run_state: RunState, ancient_def: dict[str, Any], choice: dict[str, Any], executor) -> None:
         ancient_id = str(ancient_def["id"])
@@ -54,6 +59,7 @@ class AncientSystem:
         seen = set(run_state.flags.get("seen_ancients", []))
         seen.add(ancient_id)
         run_state.flags["seen_ancients"] = sorted(seen)
+        RunMetricsSystem.record_ancient_choice(run_state, ancient_id, choice_id)
         run_state.add_message(
             f"エンシェント: {ancient_def.get('name', ancient_id)} / {choice.get('name', choice_id)}"
         )

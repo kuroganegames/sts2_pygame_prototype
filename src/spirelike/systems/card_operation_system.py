@@ -6,6 +6,7 @@ from typing import Any
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, RunState
 from spirelike.models.selection import CardSelectionRequest, CardSelectionResult
+from spirelike.profile.run_metrics import RunMetricsSystem
 from spirelike.systems.actions import TriggerEventAction
 from spirelike.systems.card_modifier_system import CardModifierSystem
 from spirelike.systems.card_selection_system import CardSelectionSystem
@@ -70,6 +71,7 @@ class CardOperationSystem:
         if card.upgraded or not card_def.get("upgrade"):
             return False
         card.upgraded = True
+        RunMetricsSystem.record_card_upgraded(run_state, card.card_id)
         name = self.registry.card_display_name(card.card_id, True)
         run_state.add_message(f"カード強化: {name}")
         if combat:
@@ -80,6 +82,7 @@ class CardOperationSystem:
         if zone != "master_deck" or card not in run_state.player.deck:
             return False
         name = self.registry.card_display_name(card.card_id, card.upgraded)
+        RunMetricsSystem.record_card_removed(run_state, card.card_id)
         run_state.player.deck.remove(card)
         run_state.add_message(f"カード削除: {name}")
         return True
@@ -89,12 +92,14 @@ class CardOperationSystem:
         candidates = self._transform_pool(run_state, card, pool_def)
         if not candidates:
             return False
+        old_card_id = card.card_id
         old_name = self.registry.card_display_name(card.card_id, card.upgraded)
         card.card_id = self.rng.choice(candidates)
         if not pool_def.get("keep_upgrade", False):
             card.upgraded = False
         card.modifiers.clear()
         card.state.clear()
+        RunMetricsSystem.record_card_transformed(run_state, old_card_id, card.card_id)
         new_name = self.registry.card_display_name(card.card_id, card.upgraded)
         run_state.add_message(f"カード変化: {old_name} -> {new_name}")
         if combat:
@@ -155,6 +160,7 @@ class CardOperationSystem:
         )
         if not ok:
             return False
+        RunMetricsSystem.record_modifier_applied(run_state, modifier_id)
         modifier_name = self.registry.card_modifier(modifier_id).get("name", modifier_id)
         card_name = self.registry.card_display_name(card.card_id, card.upgraded)
         msg = f"{card_name} に {modifier_name} を付与"
@@ -168,6 +174,7 @@ class CardOperationSystem:
         ok = self.card_modifiers.remove_modifier(card, modifier_id, stacks=operation.get("stacks"))
         if not ok:
             return False
+        RunMetricsSystem.record_modifier_cleansed(run_state, modifier_id)
         modifier_name = self.registry.card_modifier(modifier_id).get("name", modifier_id)
         card_name = self.registry.card_display_name(card.card_id, card.upgraded)
         msg = f"{card_name} から {modifier_name} を解除"
@@ -178,9 +185,12 @@ class CardOperationSystem:
 
     def cleanse_modifiers(self, run_state: RunState, card: CardInstance, operation: dict[str, Any], combat=None) -> bool:
         modifier_type = str(operation.get("modifier_type", "affliction"))
+        targets = [m.modifier_id for m in self.card_modifiers.active_modifiers(card) if m.modifier_type == modifier_type]
         removed = self.card_modifiers.remove_by_type(card, modifier_type, count=operation.get("count"))
         if removed <= 0:
             return False
+        for modifier_id in targets[:removed]:
+            RunMetricsSystem.record_modifier_cleansed(run_state, modifier_id)
         card_name = self.registry.card_display_name(card.card_id, card.upgraded)
         msg = f"{card_name} の {modifier_type} を{removed}個解除"
         run_state.add_message(msg)

@@ -1,0 +1,9 @@
+schema_version: 1
+id: cultist_study
+title: 信徒の詠唱
+order: 30
+description: 信徒たちは何かを呼んでいる。その声は戦いが終わっても耳の奥に残る。
+unlock_conditions:
+  - type: enemy_defeated_count_at_least
+    enemy: cultist
+    amount: 3

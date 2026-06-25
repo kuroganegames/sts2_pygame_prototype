@@ -27,6 +27,7 @@ class ContentRegistry:
     potions: Dict[str, ContentItem] = field(default_factory=dict)
     ancients: Dict[str, ContentItem] = field(default_factory=dict)
     card_modifiers: Dict[str, ContentItem] = field(default_factory=dict)
+    timeline_fragments: Dict[str, ContentItem] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
     def card(self, card_id: str) -> dict[str, Any]:
@@ -58,6 +59,9 @@ class ContentRegistry:
 
     def card_modifier(self, modifier_id: str) -> dict[str, Any]:
         return self.card_modifiers[modifier_id].data
+
+    def timeline_fragment(self, fragment_id: str) -> dict[str, Any]:
+        return self.timeline_fragments[fragment_id].data
 
     def image_for(self, kind: str, item_id: str) -> Optional[Path]:
         table = getattr(self, kind)
@@ -93,6 +97,21 @@ class ContentLoader:
     MODIFIER_TYPES = {"enchantment", "affliction"}
     MODIFIER_DURATIONS = {"combat", "run", "permanent"}
     MODIFIER_NUMERIC_EVENTS = {"calculate_card_cost", "calculate_card_damage", "calculate_card_block"}
+    TIMELINE_CONDITION_TYPES = {
+        "runs_started_at_least",
+        "runs_completed_at_least",
+        "victories_at_least",
+        "enemy_seen",
+        "enemy_defeated",
+        "enemy_defeated_count_at_least",
+        "card_seen",
+        "card_played_count_at_least",
+        "relic_acquired",
+        "potion_used",
+        "modifier_applied",
+        "modifier_applied_count_at_least",
+        "ancient_choice",
+    }
 
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -109,6 +128,7 @@ class ContentLoader:
         self._load_collection("potions", self.registry.potions, require_image=True, recursive=True)
         self._load_collection("ancients", self.registry.ancients, require_image=True, recursive=True)
         self._load_collection("card_modifiers", self.registry.card_modifiers, require_image=True, recursive=True)
+        self._load_collection("timeline", self.registry.timeline_fragments, require_image=False, recursive=True)
         self._validate_references()
         return self.registry
 
@@ -207,6 +227,9 @@ class ContentLoader:
         for modifier_id, item in self.registry.card_modifiers.items():
             self._validate_card_modifier(modifier_id, item.data)
 
+        for fragment_id, item in self.registry.timeline_fragments.items():
+            self._validate_timeline_fragment(fragment_id, item.data)
+
     def _validate_card_modifier(self, modifier_id: str, data: dict[str, Any]) -> None:
         modifier_type = data.get("type")
         if modifier_type not in self.MODIFIER_TYPES:
@@ -220,6 +243,30 @@ class ContentLoader:
                 self.registry.warnings.append(f"Card modifier {modifier_id} has invalid numeric event: {event}")
         for trigger in data.get("triggers", []) or []:
             self._validate_effects(trigger.get("effects", []), f"card_modifier {modifier_id}.{trigger.get('event', '<event>')}")
+
+    def _validate_timeline_fragment(self, fragment_id: str, data: dict[str, Any]) -> None:
+        if not data.get("title"):
+            self.registry.warnings.append(f"Timeline fragment {fragment_id} has no title")
+        conditions = data.get("unlock_conditions", []) or []
+        if not isinstance(conditions, list):
+            self.registry.warnings.append(f"Timeline fragment {fragment_id} unlock_conditions must be a list")
+            return
+        for condition in conditions:
+            condition_type = condition.get("type")
+            if condition_type not in self.TIMELINE_CONDITION_TYPES:
+                self.registry.warnings.append(f"Timeline fragment {fragment_id} has invalid condition: {condition_type}")
+            if condition.get("enemy") and condition["enemy"] not in self.registry.enemies:
+                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing enemy: {condition['enemy']}")
+            if condition.get("card") and condition["card"] not in self.registry.cards:
+                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing card: {condition['card']}")
+            if condition.get("relic") and condition["relic"] not in self.registry.relics:
+                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing relic: {condition['relic']}")
+            if condition.get("potion") and condition["potion"] not in self.registry.potions:
+                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing potion: {condition['potion']}")
+            if condition.get("modifier") and condition["modifier"] not in self.registry.card_modifiers:
+                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing modifier: {condition['modifier']}")
+            if condition.get("ancient") and condition["ancient"] not in self.registry.ancients:
+                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing ancient: {condition['ancient']}")
 
     def _validate_effects(self, effects: Iterable[dict[str, Any]], where: str) -> None:
         for effect in effects or []:

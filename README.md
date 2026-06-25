@@ -2,7 +2,7 @@
 
 Pygameで作った、Slay the Spire 2風のシングルプレイ・ローグライクデッキビルダー初期実装です。
 
-公式素材や公式カード名は含めていません。カード、敵、キャラクター、レリック、ポーション、エンシェント、カード修飾、イベント、マップ生成ルールをYAMLで管理するためのプロトタイプです。
+公式素材や公式カード名は含めていません。カード、敵、キャラクター、レリック、ポーション、エンシェント、カード修飾、Timeline、イベント、マップ生成ルールをYAMLで管理するためのプロトタイプです。
 
 ## 起動方法
 
@@ -32,6 +32,7 @@ python main.py
 - Powerカード / Exhaust / Retain / Ethereal / Innate / Unplayable
 - Enchantment / Affliction によるカード1枚単位の修飾
 - 安全地点でのオートセーブ / タイトルからのラン再開
+- profile.jsonによるラン履歴 / 敵図鑑 / コレクション / Timeline記録
 - ポーションの獲得、購入、戦闘中使用
 - 敵Intentと簡易AI
 - 戦闘報酬、カード追加、レリック獲得、ポーション獲得
@@ -57,6 +58,8 @@ id: sharp
 image: sharp.png
 ```
 
+Timeline断片は `content/timeline/*.yaml` で管理します。
+
 ## 主なフォルダ
 
 ```text
@@ -65,6 +68,7 @@ src/spirelike/
   content/    YAMLローダー、ContentRegistry
   core/       RunState、CombatState、RNG、ラン生成
   models/     Dataclass群
+  profile/    profile.json、ラン履歴、図鑑、Timeline
   save/       JSONセーブ / ロード
   scenes/     画面
   systems/    戦闘、効果実行、報酬、マップ生成、ショップなど
@@ -78,6 +82,7 @@ content/
   potions/
   ancients/
   card_modifiers/
+  timeline/
   statuses/
   maps/
   events/

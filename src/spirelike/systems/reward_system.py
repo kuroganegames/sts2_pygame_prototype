@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, RelicInstance, RunState
+from spirelike.profile.run_metrics import RunMetricsSystem
 from spirelike.systems.potion_system import PotionSystem
 
 
@@ -120,9 +121,11 @@ class RewardSystem:
             return
         if reward.gold:
             run_state.player.gold += reward.gold
+            RunMetricsSystem.add_number(run_state, "gold_gained", reward.gold)
             run_state.add_message(f"ゴールド +{reward.gold}")
         if reward.relic_id:
             run_state.player.relics.append(RelicInstance(relic_id=reward.relic_id))
+            RunMetricsSystem.record_relic_acquired(run_state, reward.relic_id)
             name = self.registry.relic(reward.relic_id).get("name", reward.relic_id)
             run_state.add_message(f"レリック獲得: {name}")
         if reward.potion_id:
@@ -131,4 +134,5 @@ class RewardSystem:
 
     def choose_card(self, run_state: RunState, card_id: str) -> None:
         run_state.player.deck.append(CardInstance(card_id=card_id))
+        RunMetricsSystem.record_card_acquired(run_state, card_id)
         run_state.add_message(f"カード追加: {self.registry.card(card_id).get('name', card_id)}")

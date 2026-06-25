@@ -3,6 +3,7 @@ from __future__ import annotations
 import pygame
 
 from spirelike.core.run_factory import create_run
+from spirelike.profile.run_metrics import RunMetricsSystem
 from spirelike.scenes.base_scene import BaseScene
 from spirelike.ui import colors
 from spirelike.ui.buttons import Button
@@ -36,6 +37,8 @@ class CharacterSelectScene(BaseScene):
 
     def start_run(self, character_id: str) -> None:
         run = create_run(self.app.registry, character_id)
+        RunMetricsSystem.ensure(run)
+        self.app.profile_system.record_run_started(run)
         self.app.run_state = run
         # ラン開始時にエンシェント選択を挟む。YAMLが無い場合はAncientScene側でマップへ進める。
         self.app.scene_manager.change(
