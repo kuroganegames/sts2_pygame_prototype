@@ -34,6 +34,18 @@ class EventScene(BaseScene):
 
     def choose(self, choice: dict) -> None:
         self.executor.execute_many(self.run_state, choice.get("effects", []))
+        if self.run_state.pending_selection is not None:
+            self.app.scene_manager.change(
+                "card_select",
+                {
+                    "run_state": self.run_state,
+                    "request": self.run_state.pending_selection,
+                    "return_scene": "map",
+                    "return_payload": {"run_state": self.run_state},
+                    "finish_node_id": self.node_id,
+                },
+            )
+            return
         self.run_state.map_state.mark_visited(self.node_id)
         self.app.scene_manager.change("map", {"run_state": self.run_state})
 

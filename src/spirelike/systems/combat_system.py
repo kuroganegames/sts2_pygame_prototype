@@ -5,9 +5,17 @@ from typing import Any, Optional
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, CombatState, EnemyInstance, PlayerState, RunState
+from spirelike.models.selection import CardSelectionResult
 from spirelike.systems.action_queue import ActionQueue
-from spirelike.systems.actions import DrawCardsAction, EndTurnHandCleanupAction, FinishCardUseAction, PlayCardAction, TriggerEventAction
+from spirelike.systems.actions import (
+    DrawCardsAction,
+    EndTurnHandCleanupAction,
+    FinishCardUseAction,
+    PlayCardAction,
+    TriggerEventAction,
+)
 from spirelike.systems.ancient_system import AncientSystem
+from spirelike.systems.card_operation_system import CardOperationSystem
 from spirelike.systems.card_rules import CardRules
 from spirelike.systems.effect_executor import EffectExecutor
 from spirelike.systems.power_system import PowerSystem
@@ -29,6 +37,7 @@ class CombatSystem:
         self.rng = rng
         self.card_rules = CardRules(registry)
         self.power_system = PowerSystem(registry)
+        self.card_operation_system = CardOperationSystem(registry, rng)
         self.action_queue = ActionQueue()
         self.draw_per_turn = 5
 
@@ -140,6 +149,8 @@ class CombatSystem:
         self.log(f"{card_id} を{amount}枚追加")
 
     def can_play(self, card: CardInstance) -> tuple[bool, str]:
+        if self.state.pending_selection is not None:
+            return False, "カード選択中"
         if self.card_rules.has_flag(card, "unplayable"):
             return False, "使用不可"
         cost = self.get_card_cost(card)
@@ -201,8 +212,17 @@ class CombatSystem:
         self.log(f"{self.registry.card_display_name(card.card_id, card.upgraded)} を使用")
         self.enqueue_action(TriggerEventAction("card_played", context))
         self.executor.execute_many(self.registry.card_effects(card.card_id, card.upgraded), context)
-        self.enqueue_action(TriggerEventAction("card_resolved", context))
-        self.enqueue_action(FinishCardUseAction(card=card, context=context))
+        if self.state.pending_selection is None:
+            self.enqueue_action(TriggerEventAction("card_resolved", context))
+            self.enqueue_action(FinishCardUseAction(card=card, context=context))
+
+    def complete_card_selection(self, result: CardSelectionResult) -> None:
+        request = self.state.pending_selection
+        if request is None:
+            return
+        self.state.pending_selection = None
+        self.card_operation_system.apply_result(self.run_state, request, result, combat=self)
+        self.resolve_actions()
 
     def move_card(self, card: CardInstance, from_zone: str, to_zone: str) -> bool:
         source = getattr(self.state, from_zone)
@@ -220,7 +240,7 @@ class CombatSystem:
         return True
 
     def end_player_turn(self) -> None:
-        if self.state.outcome is not None:
+        if self.state.outcome is not None or self.state.pending_selection is not None:
             return
         self.enqueue_action(TriggerEventAction("player_turn_end", {"owner": "player"}))
         self.enqueue_action(EndTurnHandCleanupAction())
@@ -391,6 +411,8 @@ class CombatSystem:
                     continue
                 context = {**event_context, "source": player, "target": player, "relic": relic, "card_def": event_context.get("card_def", {})}
                 self.executor.execute_many(trigger.get("effects", []), context)
+                if self.state.pending_selection is not None:
+                    return
 
         # Ancient blessing triggers
         ancient_system = AncientSystem(self.registry)
@@ -414,6 +436,8 @@ class CombatSystem:
                     "card_def": event_context.get("card_def", {}),
                 }
                 self.executor.execute_many(trigger.get("effects", []), context)
+                if self.state.pending_selection is not None:
+                    return
 
         # Power triggers
         for power in list(self.state.powers):
@@ -433,6 +457,8 @@ class CombatSystem:
                     "card_def": event_context.get("card_def", {}),
                 }
                 self.executor.execute_many(trigger.get("effects", []), context)
+                if self.state.pending_selection is not None:
+                    return
 
         if not self.action_queue.is_resolving:
             self.resolve_actions()

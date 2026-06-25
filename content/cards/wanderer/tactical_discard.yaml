@@ -1,0 +1,35 @@
+schema_version: 1
+id: tactical_discard
+name: 戦術的破棄
+image: preparation.png
+character: wanderer
+type: skill
+rarity: common
+cost: 0
+target: self
+description: 手札を1枚捨てる。6ブロックを得る。
+effects:
+  - type: discard_cards
+    selector:
+      zones:
+        - hand
+      count: 1
+      player_choice: true
+      allow_skip: true
+  - type: gain_block
+    target: self
+    amount: 6
+upgrade:
+  name: 戦術的破棄+
+  description: 手札を1枚捨てる。9ブロックを得る。
+  effects:
+    - type: discard_cards
+      selector:
+        zones:
+          - hand
+        count: 1
+        player_choice: true
+        allow_skip: true
+    - type: gain_block
+      target: self
+      amount: 9

@@ -41,6 +41,18 @@ class AncientScene(BaseScene):
             for choice, rect in self.choice_rects:
                 if rect.collidepoint(event.pos):
                     self.ancient_system.apply_choice(self.run_state, self.ancient_def, choice, self.executor)
+                    if self.run_state.pending_selection is not None:
+                        self.app.scene_manager.change(
+                            "card_select",
+                            {
+                                "run_state": self.run_state,
+                                "request": self.run_state.pending_selection,
+                                "return_scene": self.after,
+                                "return_payload": {"run_state": self.run_state},
+                                "finish_node_id": self.node_id,
+                            },
+                        )
+                        return
                     self.finish()
                     return
 

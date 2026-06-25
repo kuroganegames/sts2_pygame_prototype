@@ -8,13 +8,14 @@ from spirelike.app.scene_manager import SceneManager
 from spirelike.content.loader import ContentLoader
 from spirelike.scenes.title_scene import TitleScene
 from spirelike.scenes.character_select_scene import CharacterSelectScene
+from spirelike.scenes.ancient_scene import AncientScene
 from spirelike.scenes.map_scene import MapScene
 from spirelike.scenes.combat_scene import CombatScene
 from spirelike.scenes.reward_scene import RewardScene
 from spirelike.scenes.rest_scene import RestScene
 from spirelike.scenes.event_scene import EventScene
 from spirelike.scenes.shop_scene import ShopScene
-from spirelike.scenes.ancient_scene import AncientScene
+from spirelike.scenes.card_select_scene import CardSelectScene
 from spirelike.scenes.run_result_scene import RunResultScene
 
 
@@ -44,13 +45,14 @@ class GameApp:
         self.scene_manager.register(
             "character_select", lambda app, payload: CharacterSelectScene(app, payload)
         )
+        self.scene_manager.register("ancient", lambda app, payload: AncientScene(app, payload))
         self.scene_manager.register("map", lambda app, payload: MapScene(app, payload))
         self.scene_manager.register("combat", lambda app, payload: CombatScene(app, payload))
         self.scene_manager.register("reward", lambda app, payload: RewardScene(app, payload))
         self.scene_manager.register("rest", lambda app, payload: RestScene(app, payload))
         self.scene_manager.register("event", lambda app, payload: EventScene(app, payload))
         self.scene_manager.register("shop", lambda app, payload: ShopScene(app, payload))
-        self.scene_manager.register("ancient", lambda app, payload: AncientScene(app, payload))
+        self.scene_manager.register("card_select", lambda app, payload: CardSelectScene(app, payload))
         self.scene_manager.register("run_result", lambda app, payload: RunResultScene(app, payload))
 
     def run(self) -> None:

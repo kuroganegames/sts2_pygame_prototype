@@ -43,6 +43,9 @@ class ActionQueue:
         resolved_count = 0
         try:
             while self._queue:
+                if combat.state.pending_selection is not None:
+                    break
+
                 resolved_count += 1
                 if resolved_count > self.max_actions_per_resolution:
                     combat.log("ActionQueue safety stop")

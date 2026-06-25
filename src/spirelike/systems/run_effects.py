@@ -5,6 +5,16 @@ from typing import Any
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, RelicInstance, RunState
+from spirelike.models.selection import CardSelectionRequest, CardSelectionResult
+from spirelike.systems.card_operation_system import CardOperationSystem
+from spirelike.systems.card_selection_system import CardSelectionSystem
+
+
+SELECTION_RUN_EFFECTS = {
+    "upgrade_card": "upgrade",
+    "remove_card_from_deck": "remove",
+    "transform_card": "transform",
+}
 
 
 class RunEffectExecutor:
@@ -14,11 +24,16 @@ class RunEffectExecutor:
         self.registry = registry
         self.rng = rng
 
-    def execute_many(self, run_state: RunState, effects: list[dict[str, Any]]) -> None:
-        for effect in effects or []:
-            self.execute(run_state, effect)
+    def execute_many(self, run_state: RunState, effects: list[dict[str, Any]]) -> bool:
+        run_state.pending_selection = None
+        run_state.pending_effects = []
+        for index, effect in enumerate(effects or []):
+            completed = self.execute(run_state, effect, remaining_effects=(effects or [])[index + 1 :])
+            if not completed:
+                return False
+        return True
 
-    def execute(self, run_state: RunState, effect: dict[str, Any]) -> None:
+    def execute(self, run_state: RunState, effect: dict[str, Any], remaining_effects: list[dict[str, Any]] | None = None) -> bool:
         effect_type = effect.get("type")
         player = run_state.player
         if effect_type == "heal":
@@ -62,6 +77,8 @@ class RunEffectExecutor:
                 card = self.rng.choice(candidates)
                 player.deck.remove(card)
                 run_state.add_message(f"カード削除: {self.registry.card_display_name(card.card_id, card.upgraded)}")
+        elif effect_type in SELECTION_RUN_EFFECTS:
+            return self._selection_operation(run_state, effect, SELECTION_RUN_EFFECTS[effect_type], remaining_effects or [])
         elif effect_type == "gain_potion":
             from spirelike.systems.potion_system import PotionSystem
 
@@ -76,9 +93,69 @@ class RunEffectExecutor:
                 rarity_weights=effect.get("rarity_weights"),
             )
         elif effect_type == "none" or effect_type is None:
-            return
+            return True
         else:
             run_state.add_message(f"未実装Effect: {effect_type}")
+        return True
+
+    def _selection_operation(
+        self,
+        run_state: RunState,
+        effect: dict[str, Any],
+        operation_type: str,
+        remaining_effects: list[dict[str, Any]],
+    ) -> bool:
+        selector = effect.get("selector", {}) or {}
+        zones = selector.get("zones") or selector.get("zone") or ["master_deck"]
+        if isinstance(zones, str):
+            zones = [zones]
+        count = int(selector.get("count", effect.get("count", 1)))
+        operation = {
+            "type": operation_type,
+            **{k: v for k, v in effect.items() if k not in {"type", "selector", "title", "message"}},
+        }
+        request = CardSelectionRequest(
+            title=str(effect.get("title", self._default_title(operation_type))),
+            message=str(effect.get("message", self._default_message(operation_type))),
+            source_zones=list(zones),
+            exact_count=count,
+            min_count=count,
+            max_count=count,
+            allow_skip=bool(selector.get("allow_skip", effect.get("allow_skip", False))),
+            filter=selector.get("filter", {}) or {},
+            operation=operation,
+        )
+
+        if selector.get("player_choice", False):
+            run_state.pending_selection = request
+            run_state.pending_effects = list(remaining_effects or [])
+            run_state.add_message(request.message)
+            return False
+
+        candidates = CardSelectionSystem(self.registry).collect_candidates(run_state, request, None)
+        if not candidates:
+            return True
+        selected = self.rng.sample(candidates, k=min(count, len(candidates)))
+        result = CardSelectionResult(
+            request_id=request.request_id,
+            selected_instance_ids=[candidate.card.instance_id for candidate in selected],
+        )
+        CardOperationSystem(self.registry, self.rng).apply_result(run_state, request, result, combat=None)
+        return True
+
+    def _default_title(self, operation_type: str) -> str:
+        return {
+            "upgrade": "カード強化",
+            "remove": "カード削除",
+            "transform": "カード変化",
+        }.get(operation_type, "カード選択")
+
+    def _default_message(self, operation_type: str) -> str:
+        return {
+            "upgrade": "強化するカードを選んでください。",
+            "remove": "削除するカードを選んでください。",
+            "transform": "変化させるカードを選んでください。",
+        }.get(operation_type, "カードを選んでください。")
 
     def _card_candidates(
         self,

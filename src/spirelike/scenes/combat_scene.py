@@ -5,11 +5,13 @@ import pygame
 from spirelike.core.rng import RunRng
 from spirelike.models.entities import EnemyInstance
 from spirelike.scenes.base_scene import BaseScene
+from spirelike.systems.card_selection_system import CardSelectionSystem
 from spirelike.systems.combat_system import CombatSystem
 from spirelike.systems.potion_system import PotionSystem
 from spirelike.systems.reward_system import RewardSystem
 from spirelike.ui import colors
 from spirelike.ui.buttons import Button
+from spirelike.ui.card_selection_view import CardSelectionView
 from spirelike.ui.card_view import CardView
 from spirelike.ui.fonts import get_font
 from spirelike.ui.images import image_cache
@@ -27,6 +29,9 @@ class CombatScene(BaseScene):
         rngs = RunRng(self.run_state.seed + self.run_state.floor)
         self.combat = CombatSystem(app.registry, self.run_state, self.enemy_ids, rngs.combat)
         self.potion_system = PotionSystem(app.registry)
+        self.selection_system = CardSelectionSystem(app.registry)
+        self.selection_view: CardSelectionView | None = None
+        self.selection_request_id: str | None = None
         self.selected_card = None
         self.selected_potion_slot: int | None = None
         self.card_rects: dict[str, pygame.Rect] = {}
@@ -41,6 +46,17 @@ class CombatScene(BaseScene):
         self._after_state_change()
 
     def handle_event(self, event) -> None:
+        if self.combat.state.pending_selection is not None:
+            self._ensure_selection_view()
+            if self.selection_view:
+                result = self.selection_view.handle_event(event)
+                if result:
+                    self.selection_view = None
+                    self.selection_request_id = None
+                    self.combat.complete_card_selection(result)
+                    self._after_state_change()
+            return
+
         super().handle_event(event)
         if event.type == pygame.MOUSEMOTION:
             pass
@@ -78,6 +94,18 @@ class CombatScene(BaseScene):
                 if rect and rect.collidepoint(pos):
                     self.on_card_clicked(card)
                     return
+
+    def _ensure_selection_view(self) -> None:
+        request = self.combat.state.pending_selection
+        if request is None:
+            self.selection_view = None
+            self.selection_request_id = None
+            return
+        if self.selection_view is not None and self.selection_request_id == request.request_id:
+            return
+        candidates = self.selection_system.collect_candidates(self.run_state, request, self.combat.state)
+        self.selection_view = CardSelectionView(self.app.registry, request, candidates)
+        self.selection_request_id = request.request_id
 
     def on_potion_clicked(self, slot_index: int) -> None:
         potion = self.run_state.player.potions[slot_index]
@@ -147,6 +175,12 @@ class CombatScene(BaseScene):
             draw_text(surface, "ポーション対象を選択中", get_font(18, bold=True), colors.GOLD, (690, 64))
         elif self.selected_card is not None:
             draw_text(surface, "カード対象を選択中", get_font(18, bold=True), colors.GOLD, (690, 64))
+        elif state.pending_selection is not None:
+            draw_text(surface, "カード選択中", get_font(18, bold=True), colors.GOLD, (690, 64))
+
+        if state.powers:
+            power_text = " / ".join(f"{p.power_id}x{p.stacks}" for p in state.powers)
+            draw_text(surface, f"Powers: {power_text}", get_font(15), colors.PURPLE, (40, 122))
 
         self.enemy_rects.clear()
         alive = state.alive_enemies()
@@ -184,6 +218,11 @@ class CombatScene(BaseScene):
 
         for button in self.buttons:
             button.draw(surface)
+
+        if self.combat.state.pending_selection is not None:
+            self._ensure_selection_view()
+            if self.selection_view:
+                self.selection_view.draw(surface)
 
     def draw_enemy(self, surface, enemy: EnemyInstance, pos: tuple[int, int]) -> None:
         x, y = pos
