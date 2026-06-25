@@ -1,0 +1,32 @@
+schema_version: 1
+id: memory_surge
+name: 記憶の奔流
+image: battle_focus.png
+character: wanderer
+type: skill
+rarity: rare
+cost: 1
+target: self
+exhaust: true
+description: 捨て札からカードを1枚選び、手札に加える。廃棄。
+effects:
+  - type: fetch_card_to_hand
+    selector:
+      zones:
+        - discard_pile
+      count: 1
+      player_choice: true
+      allow_skip: true
+upgrade:
+  name: 記憶の奔流+
+  description: 捨て札からカードを1枚選び、手札に加える。カードを1枚引く。廃棄。
+  effects:
+    - type: fetch_card_to_hand
+      selector:
+        zones:
+          - discard_pile
+        count: 1
+        player_choice: true
+        allow_skip: true
+    - type: draw_cards
+      amount: 1

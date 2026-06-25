@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from spirelike.models.entities import CardInstance
+from spirelike.models.selection import CardSelectionRequest
 
 
 @dataclass
@@ -99,6 +100,16 @@ class TriggerEventAction:
 
     def execute(self, combat: "CombatSystem") -> None:
         combat.fire_trigger_event(self.event_name, self.context)
+
+
+@dataclass
+class RequestCardSelectionAction:
+    request: CardSelectionRequest
+    name: str = "request_card_selection"
+
+    def execute(self, combat: "CombatSystem") -> None:
+        combat.state.pending_selection = self.request
+        combat.log(self.request.message)
 
 
 @dataclass

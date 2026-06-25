@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 import uuid
 
+from spirelike.models.selection import CardSelectionRequest
+
 
 def new_id() -> str:
     return uuid.uuid4().hex
@@ -175,6 +177,8 @@ class RunState:
     flags: dict[str, Any] = field(default_factory=dict)
     messages: list[str] = field(default_factory=list)
     ancient_blessings: list[AncientBlessingInstance] = field(default_factory=list)
+    pending_selection: CardSelectionRequest | None = None
+    pending_effects: list[dict[str, Any]] = field(default_factory=list)
 
     def add_message(self, text: str) -> None:
         self.messages.append(text)
@@ -192,6 +196,7 @@ class CombatState:
     limbo: list[CardInstance]
     powers: list[PowerInstance]
     energy: int
+    pending_selection: CardSelectionRequest | None = None
     turn_number: int = 0
     cards_played_this_turn: int = 0
     combat_end_fired: bool = False

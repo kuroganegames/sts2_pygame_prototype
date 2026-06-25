@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from spirelike.models.selection import CardSelectionRequest, CardSelectionResult
 from spirelike.systems.actions import (
     AddCardToPileAction,
     ApplyStatusAction,
@@ -10,7 +11,20 @@ from spirelike.systems.actions import (
     GainBlockAction,
     GainEnergyAction,
     HealAction,
+    RequestCardSelectionAction,
 )
+from spirelike.systems.card_operation_system import CardOperationSystem
+from spirelike.systems.card_selection_system import CardSelectionSystem
+
+
+SELECTION_EFFECTS = {
+    "upgrade_card": "upgrade",
+    "remove_card_from_deck": "remove",
+    "transform_card": "transform",
+    "exhaust_cards": "exhaust",
+    "discard_cards": "discard",
+    "fetch_card_to_hand": "fetch_to_hand",
+}
 
 
 class EffectExecutor:
@@ -20,7 +34,7 @@ class EffectExecutor:
     def execute_many(self, effects: list[dict[str, Any]], context: dict[str, Any]) -> None:
         for effect in effects or []:
             self.execute(effect, context)
-            if self.combat.state.outcome == "defeat":
+            if self.combat.state.outcome == "defeat" or self.combat.state.pending_selection is not None:
                 break
 
     def execute(self, effect: dict[str, Any], context: dict[str, Any]) -> None:
@@ -44,10 +58,14 @@ class EffectExecutor:
             self._add_card_to_pile(effect, context, "draw")
         elif effect_type == "add_card_to_hand":
             self._add_card_to_pile(effect, context, "hand")
+        elif effect_type in SELECTION_EFFECTS:
+            self._selection_operation(effect, context, SELECTION_EFFECTS[effect_type])
         elif effect_type == "repeat":
             times = self.resolve_amount(effect.get("times", 1), context)
             for _ in range(max(0, times)):
                 self.execute_many(effect.get("effects", []), context)
+                if self.combat.state.pending_selection is not None:
+                    break
         elif effect_type == "if":
             branch = effect.get("then", []) if self._check_condition(effect.get("condition", {}), context) else effect.get("else", [])
             self.execute_many(branch, context)
@@ -55,6 +73,78 @@ class EffectExecutor:
             return
         else:
             self.combat.log(f"未実装効果: {effect_type}")
+
+    def _selection_operation(
+        self,
+        effect: dict[str, Any],
+        context: dict[str, Any],
+        operation_type: str,
+    ) -> None:
+        selector = effect.get("selector", {}) or {}
+        zones = selector.get("zones") or selector.get("zone") or ["master_deck"]
+        if isinstance(zones, str):
+            zones = [zones]
+        count = int(selector.get("count", effect.get("count", 1)))
+        allow_skip = bool(selector.get("allow_skip", effect.get("allow_skip", False)))
+        operation = {
+            "type": operation_type,
+            **{k: v for k, v in effect.items() if k not in {"type", "selector", "title", "message"}},
+        }
+        request = CardSelectionRequest(
+            title=str(effect.get("title", self._default_title(operation_type))),
+            message=str(effect.get("message", self._default_message(operation_type))),
+            source_zones=list(zones),
+            exact_count=count,
+            min_count=count,
+            max_count=count,
+            allow_skip=allow_skip,
+            filter=selector.get("filter", {}) or {},
+            operation=operation,
+            context=context,
+        )
+
+        if selector.get("player_choice", False):
+            self.combat.enqueue_action(RequestCardSelectionAction(request))
+            return
+
+        candidates = CardSelectionSystem(self.combat.registry).collect_candidates(
+            self.combat.run_state,
+            request,
+            self.combat.state,
+        )
+        if not candidates:
+            return
+        selected = self.combat.rng.sample(candidates, k=min(count, len(candidates)))
+        result = CardSelectionResult(
+            request_id=request.request_id,
+            selected_instance_ids=[candidate.card.instance_id for candidate in selected],
+        )
+        CardOperationSystem(self.combat.registry, self.combat.rng).apply_result(
+            self.combat.run_state,
+            request,
+            result,
+            combat=self.combat,
+        )
+
+    def _default_title(self, operation_type: str) -> str:
+        return {
+            "upgrade": "カード強化",
+            "remove": "カード削除",
+            "transform": "カード変化",
+            "exhaust": "カード廃棄",
+            "discard": "カード破棄",
+            "fetch_to_hand": "カード回収",
+        }.get(operation_type, "カード選択")
+
+    def _default_message(self, operation_type: str) -> str:
+        return {
+            "upgrade": "強化するカードを選んでください。",
+            "remove": "削除するカードを選んでください。",
+            "transform": "変化させるカードを選んでください。",
+            "exhaust": "廃棄するカードを選んでください。",
+            "discard": "捨てるカードを選んでください。",
+            "fetch_to_hand": "手札に加えるカードを選んでください。",
+        }.get(operation_type, "カードを選んでください。")
 
     def _damage(self, effect: dict[str, Any], context: dict[str, Any]) -> None:
         amount = self.resolve_amount(effect.get("amount", 0), context)

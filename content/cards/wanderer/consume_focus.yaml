@@ -1,0 +1,33 @@
+schema_version: 1
+id: consume_focus
+name: 集中消費
+image: preparation.png
+character: wanderer
+type: skill
+rarity: uncommon
+cost: 1
+target: self
+description: 手札を1枚廃棄する。カードを2枚引く。
+effects:
+  - type: exhaust_cards
+    selector:
+      zones:
+        - hand
+      count: 1
+      player_choice: true
+      allow_skip: true
+  - type: draw_cards
+    amount: 2
+upgrade:
+  name: 集中消費+
+  description: 手札を1枚廃棄する。カードを3枚引く。
+  effects:
+    - type: exhaust_cards
+      selector:
+        zones:
+          - hand
+        count: 1
+        player_choice: true
+        allow_skip: true
+    - type: draw_cards
+      amount: 3
