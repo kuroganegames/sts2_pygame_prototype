@@ -13,6 +13,7 @@ class DamageAction:
     target: object
     amount: int
     card_def: dict[str, Any]
+    card: CardInstance | None = None
     name: str = "damage"
 
     def execute(self, combat: "CombatSystem") -> None:
@@ -20,7 +21,7 @@ class DamageAction:
             return
         if hasattr(self.target, "is_alive") and not self.target.is_alive():
             return
-        combat.deal_damage(self.source, self.target, self.amount, self.card_def)
+        combat.deal_damage(self.source, self.target, self.amount, self.card_def, self.card)
         combat._remove_dead_enemies()
         combat._check_victory_or_defeat()
 
@@ -29,14 +30,20 @@ class DamageAction:
 class GainBlockAction:
     target: object
     amount: int
+    card: CardInstance | None = None
     name: str = "gain_block"
 
     def execute(self, combat: "CombatSystem") -> None:
         if self.target is None or self.amount <= 0:
             return
-        self.target.block += self.amount
+        amount = self.amount
+        if self.card is not None:
+            amount = combat.card_modifier_system.modify_card_block(combat, self.card, amount)
+        if amount <= 0:
+            return
+        self.target.block += amount
         actor_name = getattr(self.target, "name", "プレイヤー")
-        combat.log(f"{actor_name}: ブロック +{self.amount}")
+        combat.log(f"{actor_name}: ブロック +{amount}")
 
 
 @dataclass
@@ -68,6 +75,21 @@ class HealAction:
     def execute(self, combat: "CombatSystem") -> None:
         healed = combat.run_state.player.heal(self.amount)
         combat.log(f"HPを{healed}回復")
+
+
+@dataclass
+class LoseHpAction:
+    target: object
+    amount: int
+    name: str = "lose_hp"
+
+    def execute(self, combat: "CombatSystem") -> None:
+        if self.target is None or self.amount <= 0:
+            return
+        actual = self.target.lose_hp(self.amount) if hasattr(self.target, "lose_hp") else 0
+        actor_name = getattr(self.target, "name", "プレイヤー")
+        combat.log(f"{actor_name}: HP -{actual}")
+        combat._check_victory_or_defeat()
 
 
 @dataclass

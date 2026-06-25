@@ -26,6 +26,7 @@ class ContentRegistry:
     events: Dict[str, ContentItem] = field(default_factory=dict)
     potions: Dict[str, ContentItem] = field(default_factory=dict)
     ancients: Dict[str, ContentItem] = field(default_factory=dict)
+    card_modifiers: Dict[str, ContentItem] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
     def card(self, card_id: str) -> dict[str, Any]:
@@ -54,6 +55,9 @@ class ContentRegistry:
 
     def ancient(self, ancient_id: str) -> dict[str, Any]:
         return self.ancients[ancient_id].data
+
+    def card_modifier(self, modifier_id: str) -> dict[str, Any]:
+        return self.card_modifiers[modifier_id].data
 
     def image_for(self, kind: str, item_id: str) -> Optional[Path]:
         table = getattr(self, kind)
@@ -86,6 +90,9 @@ class ContentRegistry:
 
 class ContentLoader:
     IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
+    MODIFIER_TYPES = {"enchantment", "affliction"}
+    MODIFIER_DURATIONS = {"combat", "run", "permanent"}
+    MODIFIER_NUMERIC_EVENTS = {"calculate_card_cost", "calculate_card_damage", "calculate_card_block"}
 
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -101,6 +108,7 @@ class ContentLoader:
         self._load_collection("events", self.registry.events, require_image=True, recursive=True)
         self._load_collection("potions", self.registry.potions, require_image=True, recursive=True)
         self._load_collection("ancients", self.registry.ancients, require_image=True, recursive=True)
+        self._load_collection("card_modifiers", self.registry.card_modifiers, require_image=True, recursive=True)
         self._validate_references()
         return self.registry
 
@@ -196,6 +204,23 @@ class ContentLoader:
                         f"ancient {ancient_id}.{choice_id}.{trigger.get('event', '<event>')}",
                     )
 
+        for modifier_id, item in self.registry.card_modifiers.items():
+            self._validate_card_modifier(modifier_id, item.data)
+
+    def _validate_card_modifier(self, modifier_id: str, data: dict[str, Any]) -> None:
+        modifier_type = data.get("type")
+        if modifier_type not in self.MODIFIER_TYPES:
+            self.registry.warnings.append(f"Card modifier {modifier_id} has invalid type: {modifier_type}")
+        duration = data.get("duration", "run")
+        if duration not in self.MODIFIER_DURATIONS:
+            self.registry.warnings.append(f"Card modifier {modifier_id} has invalid duration: {duration}")
+        for rule in data.get("modifiers", []) or []:
+            event = rule.get("event")
+            if event not in self.MODIFIER_NUMERIC_EVENTS:
+                self.registry.warnings.append(f"Card modifier {modifier_id} has invalid numeric event: {event}")
+        for trigger in data.get("triggers", []) or []:
+            self._validate_effects(trigger.get("effects", []), f"card_modifier {modifier_id}.{trigger.get('event', '<event>')}")
+
     def _validate_effects(self, effects: Iterable[dict[str, Any]], where: str) -> None:
         for effect in effects or []:
             if not isinstance(effect, dict):
@@ -224,6 +249,12 @@ class ContentLoader:
                 if potion_id not in self.registry.potions:
                     self.registry.warnings.append(
                         f"{where} references missing potion: {potion_id}"
+                    )
+            if effect.get("type") in {"apply_card_modifier", "remove_card_modifier"}:
+                modifier_id = effect.get("modifier")
+                if modifier_id not in self.registry.card_modifiers:
+                    self.registry.warnings.append(
+                        f"{where} references missing card modifier: {modifier_id}"
                     )
             if effect.get("type") == "if":
                 self._validate_effects(effect.get("then", []), where)

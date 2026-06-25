@@ -1,0 +1,17 @@
+schema_version: 1
+id: cursed_edge
+name: 呪刃
+image: cursed_edge.png
+type: affliction
+duration: combat
+stacking: unique
+description: このカードを使うたび、HPを2失う。
+valid_targets:
+  card_types:
+    - attack
+triggers:
+  - event: card_played
+    effects:
+      - type: lose_hp
+        target: player
+        amount: 2

@@ -7,6 +7,7 @@ from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, RunState
 from spirelike.models.selection import CardSelectionRequest, CardSelectionResult
 from spirelike.systems.actions import TriggerEventAction
+from spirelike.systems.card_modifier_system import CardModifierSystem
 from spirelike.systems.card_selection_system import CardSelectionSystem
 
 
@@ -14,6 +15,7 @@ class CardOperationSystem:
     def __init__(self, registry: ContentRegistry, rng: random.Random | None = None) -> None:
         self.registry = registry
         self.selection = CardSelectionSystem(registry)
+        self.card_modifiers = CardModifierSystem(registry)
         self.rng = rng or random.Random()
 
     def apply_result(
@@ -56,6 +58,12 @@ class CardOperationSystem:
                 self.exhaust(run_state, zone, card, combat)
             elif operation_type == "fetch_to_hand":
                 self.fetch_to_hand(run_state, zone, card, combat)
+            elif operation_type == "apply_modifier":
+                self.apply_modifier(run_state, card, request.operation, combat)
+            elif operation_type == "remove_modifier":
+                self.remove_modifier(run_state, card, request.operation, combat)
+            elif operation_type == "cleanse_modifiers":
+                self.cleanse_modifiers(run_state, card, request.operation, combat)
 
     def upgrade(self, run_state: RunState, card: CardInstance, combat=None) -> bool:
         card_def = self.registry.card(card.card_id)
@@ -133,6 +141,52 @@ class CardOperationSystem:
         if moved:
             combat.log(f"{self.registry.card_display_name(card.card_id, card.upgraded)} を手札へ")
         return moved
+
+    def apply_modifier(self, run_state: RunState, card: CardInstance, operation: dict[str, Any], combat=None) -> bool:
+        modifier_id = str(operation.get("modifier"))
+        stacks = int(operation.get("stacks", 1))
+        duration = operation.get("duration")
+        ok = self.card_modifiers.apply_modifier(
+            card,
+            modifier_id,
+            duration_override=duration,
+            stacks=stacks,
+            source=operation.get("source"),
+        )
+        if not ok:
+            return False
+        modifier_name = self.registry.card_modifier(modifier_id).get("name", modifier_id)
+        card_name = self.registry.card_display_name(card.card_id, card.upgraded)
+        msg = f"{card_name} に {modifier_name} を付与"
+        run_state.add_message(msg)
+        if combat:
+            combat.log(msg)
+        return True
+
+    def remove_modifier(self, run_state: RunState, card: CardInstance, operation: dict[str, Any], combat=None) -> bool:
+        modifier_id = str(operation.get("modifier"))
+        ok = self.card_modifiers.remove_modifier(card, modifier_id, stacks=operation.get("stacks"))
+        if not ok:
+            return False
+        modifier_name = self.registry.card_modifier(modifier_id).get("name", modifier_id)
+        card_name = self.registry.card_display_name(card.card_id, card.upgraded)
+        msg = f"{card_name} から {modifier_name} を解除"
+        run_state.add_message(msg)
+        if combat:
+            combat.log(msg)
+        return True
+
+    def cleanse_modifiers(self, run_state: RunState, card: CardInstance, operation: dict[str, Any], combat=None) -> bool:
+        modifier_type = str(operation.get("modifier_type", "affliction"))
+        removed = self.card_modifiers.remove_by_type(card, modifier_type, count=operation.get("count"))
+        if removed <= 0:
+            return False
+        card_name = self.registry.card_display_name(card.card_id, card.upgraded)
+        msg = f"{card_name} の {modifier_type} を{removed}個解除"
+        run_state.add_message(msg)
+        if combat:
+            combat.log(msg)
+        return True
 
     def _transform_pool(self, run_state: RunState, card: CardInstance, pool_def: dict[str, Any]) -> list[str]:
         character_id = run_state.character_id

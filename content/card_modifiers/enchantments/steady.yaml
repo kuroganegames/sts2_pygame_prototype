@@ -1,0 +1,16 @@
+schema_version: 1
+id: steady
+name: 堅実
+image: steady.png
+type: enchantment
+duration: run
+stacking: stack
+max_stacks: 2
+description: このカードのブロック量を3増やす。
+valid_targets:
+  card_types:
+    - skill
+modifiers:
+  - event: calculate_card_block
+    operation: add
+    value: 3

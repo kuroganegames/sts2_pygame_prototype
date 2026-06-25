@@ -1,0 +1,17 @@
+schema_version: 1
+id: light
+name: 軽量
+image: light.png
+type: enchantment
+duration: run
+stacking: unique
+description: このカードのコストを1下げる。0未満にはならない。
+valid_targets:
+  exclude_card_types:
+    - status
+    - curse
+modifiers:
+  - event: calculate_card_cost
+    operation: add
+    value: -1
+    min: 0

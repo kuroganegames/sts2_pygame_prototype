@@ -3,7 +3,7 @@ from __future__ import annotations
 import pygame
 
 from spirelike.content.loader import ContentRegistry
-from spirelike.models.entities import CardInstance
+from spirelike.models.entities import CardInstance, CardModifierInstance
 from spirelike.ui import colors
 from spirelike.ui.fonts import get_font
 from spirelike.ui.images import image_cache
@@ -17,6 +17,12 @@ CARD_TYPE_COLORS = {
     "status": (65, 65, 65),
     "curse": (55, 42, 63),
 }
+
+
+def modifier_id_of(modifier) -> str:
+    if isinstance(modifier, CardModifierInstance):
+        return modifier.modifier_id
+    return str(modifier)
 
 
 class CardView:
@@ -67,5 +73,19 @@ class CardView:
         draw_wrapped(surface, desc, get_font(13), colors.TEXT, desc_rect)
 
         if self.card.modifiers:
-            mod_text = "+".join(self.card.modifiers)
-            draw_text(surface, mod_text, get_font(11), colors.GOLD, (rect.x + 10, rect.bottom - 18))
+            self._draw_modifiers(surface, rect)
+
+    def _draw_modifiers(self, surface, rect: pygame.Rect) -> None:
+        labels: list[str] = []
+        for modifier in self.card.modifiers[:3]:
+            modifier_id = modifier_id_of(modifier)
+            if modifier_id not in self.registry.card_modifiers:
+                labels.append(modifier_id)
+                continue
+            mod_def = self.registry.card_modifier(modifier_id)
+            prefix = "+" if mod_def.get("type") == "enchantment" else "-"
+            stacks = getattr(modifier, "stacks", 1)
+            stack_text = f"x{stacks}" if stacks and stacks > 1 else ""
+            labels.append(f"{prefix}{mod_def.get('name', modifier_id)}{stack_text}")
+        mod_text = " ".join(labels)
+        draw_text(surface, mod_text, get_font(11, bold=True), colors.GOLD, (rect.x + 10, rect.bottom - 18))

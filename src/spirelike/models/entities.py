@@ -12,10 +12,31 @@ def new_id() -> str:
 
 
 @dataclass
+class CardModifierInstance:
+    modifier_id: str
+    modifier_type: str
+    duration: str
+    stacks: int = 1
+    source: str | None = None
+    state: dict[str, Any] = field(default_factory=dict)
+    instance_id: str = field(default_factory=new_id)
+
+    def clone(self) -> "CardModifierInstance":
+        return CardModifierInstance(
+            modifier_id=self.modifier_id,
+            modifier_type=self.modifier_type,
+            duration=self.duration,
+            stacks=self.stacks,
+            source=self.source,
+            state=dict(self.state),
+        )
+
+
+@dataclass
 class CardInstance:
     card_id: str
     upgraded: bool = False
-    modifiers: list[str] = field(default_factory=list)
+    modifiers: list[CardModifierInstance] = field(default_factory=list)
     temporary: bool = False
     # 戦闘中の一時的なコスト変更、キーワード付与、Afflictionなどの保持先。
     state: dict[str, Any] = field(default_factory=dict)
@@ -25,7 +46,16 @@ class CardInstance:
         return CardInstance(
             card_id=self.card_id,
             upgraded=self.upgraded,
-            modifiers=list(self.modifiers),
+            modifiers=[
+                modifier.clone()
+                if isinstance(modifier, CardModifierInstance)
+                else CardModifierInstance(
+                    modifier_id=str(modifier),
+                    modifier_type="enchantment",
+                    duration="run",
+                )
+                for modifier in self.modifiers
+            ],
             temporary=self.temporary,
             state=dict(self.state),
         )

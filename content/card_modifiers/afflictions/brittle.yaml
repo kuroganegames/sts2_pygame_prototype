@@ -1,0 +1,16 @@
+schema_version: 1
+id: brittle
+name: 脆化
+image: brittle.png
+type: affliction
+duration: combat
+stacking: unique
+description: このカードは使用後に廃棄される。
+valid_targets:
+  exclude_card_types:
+    - power
+    - status
+    - curse
+flags:
+  add:
+    - exhaust

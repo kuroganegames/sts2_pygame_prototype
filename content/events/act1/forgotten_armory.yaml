@@ -16,6 +16,19 @@ choices:
           player_choice: true
           filter:
             can_upgrade: true
+  - id: sharpen
+    text: 刃を研ぐ。攻撃カードを1枚選び、鋭利を付与する。
+    effects:
+      - type: apply_card_modifier
+        modifier: sharp
+        selector:
+          zones:
+            - master_deck
+          count: 1
+          player_choice: true
+          filter:
+            types:
+              - attack
   - id: take_blade
     text: 刃を持ち出す。二連斬りを得る。
     effects:
