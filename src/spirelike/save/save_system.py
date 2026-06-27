@@ -32,7 +32,6 @@ class SaveSystem:
         self.registry = registry
         self.save_dir = project_root / "saves"
         self.slots_dir = self.save_dir / "slots"
-        # 旧単一セーブの互換パス。既存テストや旧save_001.json移行のため残す。
         self.legacy_path = self.save_dir / "save_001.json"
         self.default_path = self.legacy_path
 
@@ -81,6 +80,8 @@ class SaveSystem:
         try:
             data = migrate_save(json.loads(path.read_text(encoding="utf-8")))
             run = data["run"]
+            flags = run.get("flags", {}) or {}
+            config = flags.get("run_config", {}) or {}
             player = run["player"]
             character_id = str(run.get("character_id", player.get("character_id", "")))
             if character_id in self.registry.characters:
@@ -107,6 +108,9 @@ class SaveSystem:
                 gold=int(player.get("gold", 0)),
                 deck_size=len(player.get("deck", []) or []),
                 relic_count=len(player.get("relics", []) or []),
+                mode=str(config.get("mode", "standard")),
+                custom=bool(config.get("custom", False)),
+                modifiers=list(config.get("selected_modifiers", []) or []),
             )
         except Exception as exc:
             return SaveSlotSummary(
@@ -227,6 +231,7 @@ class SaveSystem:
             "potions": len(self.registry.potions),
             "ancients": len(self.registry.ancients),
             "card_modifiers": len(self.registry.card_modifiers),
+            "run_modifiers": len(self.registry.run_modifiers),
             "maps": len(self.registry.maps),
             "events": len(self.registry.events),
         }

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 
@@ -24,5 +24,8 @@ class SaveSlotSummary:
     deck_size: int = 0
     relic_count: int = 0
     scene_label: str = ""
+    mode: str = "standard"
+    custom: bool = False
+    modifiers: list[str] = field(default_factory=list)
     is_corrupt: bool = False
     error: str = ""

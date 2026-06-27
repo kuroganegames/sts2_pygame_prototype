@@ -11,6 +11,7 @@ from spirelike.profile.profile_system import ProfileSystem
 from spirelike.save.save_system import SaveSystem
 from spirelike.scenes.title_scene import TitleScene
 from spirelike.scenes.character_select_scene import CharacterSelectScene
+from spirelike.scenes.run_setup_scene import RunSetupScene
 from spirelike.scenes.save_slot_scene import SaveSlotScene
 from spirelike.scenes.ancient_scene import AncientScene
 from spirelike.scenes.map_scene import MapScene
@@ -57,6 +58,7 @@ class GameApp:
     def _register_scenes(self) -> None:
         self.scene_manager.register("title", lambda app, payload: TitleScene(app, payload))
         self.scene_manager.register("save_slot", lambda app, payload: SaveSlotScene(app, payload))
+        self.scene_manager.register("run_setup", lambda app, payload: RunSetupScene(app, payload))
         self.scene_manager.register(
             "character_select", lambda app, payload: CharacterSelectScene(app, payload)
         )

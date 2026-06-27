@@ -46,13 +46,18 @@ class ProfileSystem:
         tmp_path.write_text(text, encoding="utf-8")
         tmp_path.replace(self.profile_path)
 
+    def run_profile_eligible(self, run_state: RunState) -> bool:
+        config = run_state.flags.get("run_config", {}) or {}
+        return bool(config.get("profile_eligible", True))
+
     def record_run_started(self, run_state: RunState) -> None:
         if run_state.flags.get("profile_run_started_recorded"):
             return
         RunMetricsSystem.ensure(run_state)
-        self.profile.summary["runs_started"] = int(self.profile.summary.get("runs_started", 0)) + 1
-        char_stats = self._character_stats(run_state.character_id)
-        char_stats["runs_started"] = int(char_stats.get("runs_started", 0)) + 1
+        if self.run_profile_eligible(run_state):
+            self.profile.summary["runs_started"] = int(self.profile.summary.get("runs_started", 0)) + 1
+            char_stats = self._character_stats(run_state.character_id)
+            char_stats["runs_started"] = int(char_stats.get("runs_started", 0)) + 1
         for card in run_state.player.deck:
             RunMetricsSystem.record_card_acquired(run_state, card.card_id)
         for relic in run_state.player.relics:
@@ -68,20 +73,25 @@ class ProfileSystem:
         record = self.build_run_record(run_state, result, metrics)
         self.profile.run_history.insert(0, record)
         self.profile.run_history = self.profile.run_history[:100]
-        self.apply_metrics_to_profile(run_state, result, metrics)
-        new_fragments = self.update_timeline_unlocks()
-        for fragment_id in new_fragments:
-            title = self.registry.timeline_fragment(fragment_id).get("title", fragment_id)
-            run_state.add_message(f"Timeline解放: {title}")
+        if self.run_profile_eligible(run_state):
+            self.apply_metrics_to_profile(run_state, result, metrics)
+            new_fragments = self.update_timeline_unlocks()
+            for fragment_id in new_fragments:
+                title = self.registry.timeline_fragment(fragment_id).get("title", fragment_id)
+                run_state.add_message(f"Timeline解放: {title}")
         self.save()
 
     def build_run_record(self, run_state: RunState, result: str, metrics: dict[str, Any]) -> dict[str, Any]:
         player = run_state.player
+        config = run_state.flags.get("run_config", {}) or {}
         return {
             "run_id": metrics.get("run_id"),
             "seed": run_state.seed,
             "character_id": run_state.character_id,
             "result": result,
+            "mode": config.get("mode", "standard"),
+            "profile_eligible": bool(config.get("profile_eligible", True)),
+            "selected_modifiers": list(config.get("selected_modifiers", []) or []),
             "started_at": metrics.get("started_at"),
             "ended_at": datetime.now(timezone.utc).isoformat(),
             "act": run_state.act,
