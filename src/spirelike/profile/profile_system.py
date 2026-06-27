@@ -12,6 +12,7 @@ from spirelike.profile.profile_data import ProfileState, CURRENT_PROFILE_SCHEMA_
 from spirelike.profile.profile_serializer import profile_from_dict, profile_to_dict
 from spirelike.profile.run_metrics import RunMetricsSystem, now_iso
 from spirelike.profile.timeline_conditions import condition_met
+from spirelike.systems.difficulty_system import DifficultySystem
 
 
 class ProfileSystem:
@@ -75,6 +76,7 @@ class ProfileSystem:
         self.profile.run_history = self.profile.run_history[:100]
         if self.run_profile_eligible(run_state):
             self.apply_metrics_to_profile(run_state, result, metrics)
+            self.update_difficulty_progression(run_state, result)
             new_fragments = self.update_timeline_unlocks()
             for fragment_id in new_fragments:
                 title = self.registry.timeline_fragment(fragment_id).get("title", fragment_id)
@@ -90,6 +92,7 @@ class ProfileSystem:
             "character_id": run_state.character_id,
             "result": result,
             "mode": config.get("mode", "standard"),
+            "difficulty_level": int(config.get("difficulty_level", 0)),
             "profile_eligible": bool(config.get("profile_eligible", True)),
             "selected_modifiers": list(config.get("selected_modifiers", []) or []),
             "started_at": metrics.get("started_at"),
@@ -143,11 +146,44 @@ class ProfileSystem:
         self._apply_bestiary(metrics)
         self._apply_compendium(metrics)
 
-    def _character_stats(self, character_id: str) -> dict[str, Any]:
-        return self.profile.characters.setdefault(
-            character_id,
-            {"runs_started": 0, "runs_completed": 0, "victories": 0, "highest_floor": 0, "highest_act": 0},
+    def update_difficulty_progression(self, run_state: RunState, result: str) -> None:
+        if result != "victory" or not self.run_profile_eligible(run_state):
+            return
+        config = run_state.flags.get("run_config", {}) or {}
+        level = int(config.get("difficulty_level", 0))
+        char_stats = self._character_stats(run_state.character_id)
+        unlocked = int(char_stats.get("highest_difficulty_unlocked", 0))
+        max_defined = DifficultySystem(self.registry).max_defined_level()
+        char_stats["highest_difficulty_victory"] = max(
+            int(char_stats.get("highest_difficulty_victory", -1)),
+            level,
         )
+        if level >= unlocked and unlocked < max_defined:
+            next_level = min(max_defined, level + 1)
+            char_stats["highest_difficulty_unlocked"] = next_level
+            run_state.add_message(f"Difficulty {next_level} 解放")
+
+    def _character_stats(self, character_id: str) -> dict[str, Any]:
+        stats = self.profile.characters.setdefault(
+            character_id,
+            {
+                "runs_started": 0,
+                "runs_completed": 0,
+                "victories": 0,
+                "highest_floor": 0,
+                "highest_act": 0,
+                "highest_difficulty_unlocked": 0,
+                "highest_difficulty_victory": -1,
+            },
+        )
+        stats.setdefault("runs_started", 0)
+        stats.setdefault("runs_completed", 0)
+        stats.setdefault("victories", 0)
+        stats.setdefault("highest_floor", 0)
+        stats.setdefault("highest_act", 0)
+        stats.setdefault("highest_difficulty_unlocked", 0)
+        stats.setdefault("highest_difficulty_victory", -1)
+        return stats
 
     def _entry(self, table: dict[str, dict[str, Any]], item_id: str) -> dict[str, Any]:
         entry = table.setdefault(item_id, {})

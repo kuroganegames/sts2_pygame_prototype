@@ -1,0 +1,8 @@
+schema_version: 1
+id: difficulty_05
+level: 5
+name: 試練 V
+description: 敵の与ダメージがさらに10%増える。
+effects:
+  - type: enemy_damage_multiplier
+    multiplier: 1.10

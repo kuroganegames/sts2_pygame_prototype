@@ -20,6 +20,7 @@ from spirelike.systems.ancient_system import AncientSystem
 from spirelike.systems.card_modifier_system import CardModifierSystem
 from spirelike.systems.card_operation_system import CardOperationSystem
 from spirelike.systems.card_rules import CardRules
+from spirelike.systems.difficulty_system import DifficultySystem
 from spirelike.systems.effect_executor import EffectExecutor
 from spirelike.systems.power_system import PowerSystem
 from spirelike.systems.run_modifier_system import RunModifierSystem
@@ -45,6 +46,7 @@ class CombatSystem:
         self.power_system = PowerSystem(registry)
         self.card_operation_system = CardOperationSystem(registry, rng)
         self.run_modifier_system = RunModifierSystem(registry)
+        self.difficulty_system = DifficultySystem(registry)
         self.action_queue = ActionQueue()
         self.draw_per_turn = 5
         self.executor = EffectExecutor(self)
@@ -106,7 +108,10 @@ class CombatSystem:
         enemy_def = self.registry.enemy(enemy_id)
         hp_def = enemy_def.get("hp", {}) or {}
         hp = self.rng.randint(int(hp_def.get("min", 10)), int(hp_def.get("max", 10)))
-        hp_multiplier = self.run_modifier_system.enemy_hp_multiplier(self.run_state)
+        hp_multiplier = (
+            self.difficulty_system.enemy_hp_multiplier(self.run_state)
+            * self.run_modifier_system.enemy_hp_multiplier(self.run_state)
+        )
         hp = max(1, int(hp * hp_multiplier))
         RunMetricsSystem.record_enemy_seen(self.run_state, enemy_id)
         return EnemyInstance(
@@ -394,6 +399,8 @@ class CombatSystem:
         target_statuses = getattr(target, "statuses", {})
         if card_def.get("type") == "attack":
             result += int(source_statuses.get("strength", 0))
+        if not isinstance(source, PlayerState) and card_def.get("type") == "attack":
+            result = int(result * self.difficulty_system.enemy_damage_multiplier(self.run_state))
         if source_statuses.get("weak", 0) > 0:
             result = int(result * 0.75)
         if target_statuses.get("vulnerable", 0) > 0:

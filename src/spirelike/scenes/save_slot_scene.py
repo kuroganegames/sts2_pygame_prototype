@@ -68,7 +68,6 @@ class SaveSlotScene(BaseScene):
                 self.message = self.app.last_load_error or "ロードに失敗しました。"
             return
 
-        # new mode
         if slot.exists and self.confirm_overwrite_slot_id != slot.slot_id:
             self.confirm_overwrite_slot_id = slot.slot_id
             self.message = "既存ランを上書きします。もう一度押すと続行します。"
@@ -135,7 +134,7 @@ class SaveSlotScene(BaseScene):
         lines = [
             f"{slot.character_name}",
             f"{slot.scene_label} / Floor {slot.floor}",
-            f"Mode: {mode_text}",
+            f"Mode: {mode_text} / D{slot.difficulty_level}",
             f"Mods: {modifiers}",
             f"Act {slot.act} / Seed {slot.seed}",
             f"HP {slot.hp}/{slot.max_hp}",

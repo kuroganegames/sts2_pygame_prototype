@@ -1,0 +1,8 @@
+schema_version: 1
+id: difficulty_02
+level: 2
+name: 試練 II
+description: 敵の与ダメージが10%増える。
+effects:
+  - type: enemy_damage_multiplier
+    multiplier: 1.10

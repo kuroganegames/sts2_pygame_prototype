@@ -29,6 +29,7 @@ class ContentRegistry:
     card_modifiers: Dict[str, ContentItem] = field(default_factory=dict)
     timeline_fragments: Dict[str, ContentItem] = field(default_factory=dict)
     run_modifiers: Dict[str, ContentItem] = field(default_factory=dict)
+    difficulty_levels: Dict[str, ContentItem] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
     def card(self, card_id: str) -> dict[str, Any]:
@@ -66,6 +67,9 @@ class ContentRegistry:
 
     def run_modifier(self, modifier_id: str) -> dict[str, Any]:
         return self.run_modifiers[modifier_id].data
+
+    def difficulty_level(self, difficulty_id: str) -> dict[str, Any]:
+        return self.difficulty_levels[difficulty_id].data
 
     def image_for(self, kind: str, item_id: str) -> Optional[Path]:
         table = getattr(self, kind)
@@ -110,6 +114,11 @@ class ContentLoader:
         "enemy_hp_multiplier",
         "map_weight_multiplier",
     }
+    DIFFICULTY_EFFECT_TYPES = {
+        "enemy_hp_multiplier",
+        "enemy_damage_multiplier",
+        "player_max_hp_delta",
+    }
     TIMELINE_CONDITION_TYPES = {
         "runs_started_at_least",
         "runs_completed_at_least",
@@ -143,6 +152,7 @@ class ContentLoader:
         self._load_collection("card_modifiers", self.registry.card_modifiers, require_image=True, recursive=True)
         self._load_collection("timeline", self.registry.timeline_fragments, require_image=False, recursive=True)
         self._load_collection("run_modifiers", self.registry.run_modifiers, require_image=False, recursive=True)
+        self._load_collection("difficulty_levels", self.registry.difficulty_levels, require_image=False, recursive=True)
         self._validate_references()
         return self.registry
 
@@ -247,6 +257,8 @@ class ContentLoader:
         for modifier_id, item in self.registry.run_modifiers.items():
             self._validate_run_modifier(modifier_id, item.data)
 
+        self._validate_difficulty_levels()
+
     def _validate_card_modifier(self, modifier_id: str, data: dict[str, Any]) -> None:
         modifier_type = data.get("type")
         if modifier_type not in self.MODIFIER_TYPES:
@@ -279,6 +291,30 @@ class ContentLoader:
                 self.registry.warnings.append(f"Run modifier {modifier_id} references missing card: {effect.get('card')}")
             if effect_type == "gain_relic" and effect.get("relic") not in self.registry.relics:
                 self.registry.warnings.append(f"Run modifier {modifier_id} references missing relic: {effect.get('relic')}")
+
+    def _validate_difficulty_levels(self) -> None:
+        seen_levels: set[int] = set()
+        for difficulty_id, item in self.registry.difficulty_levels.items():
+            data = item.data
+            if not data.get("name"):
+                self.registry.warnings.append(f"Difficulty {difficulty_id} has no name")
+            try:
+                level = int(data.get("level"))
+            except (TypeError, ValueError):
+                self.registry.warnings.append(f"Difficulty {difficulty_id} has invalid level: {data.get('level')}")
+                continue
+            if level in seen_levels:
+                self.registry.warnings.append(f"Duplicate difficulty level: {level}")
+            seen_levels.add(level)
+            effects = data.get("effects", []) or []
+            if not isinstance(effects, list):
+                self.registry.warnings.append(f"Difficulty {difficulty_id} effects must be a list")
+                continue
+            for effect in effects:
+                if effect.get("type") not in self.DIFFICULTY_EFFECT_TYPES:
+                    self.registry.warnings.append(f"Difficulty {difficulty_id} has invalid effect: {effect.get('type')}")
+        if self.registry.difficulty_levels and 0 not in seen_levels:
+            self.registry.warnings.append("Difficulty level 0 is missing")
 
     def _validate_timeline_fragment(self, fragment_id: str, data: dict[str, Any]) -> None:
         if not data.get("title"):

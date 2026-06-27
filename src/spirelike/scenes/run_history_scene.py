@@ -28,11 +28,12 @@ class RunHistoryScene(BaseScene):
             seed = record.get("seed", "?")
             deck_size = record.get("deck_size", 0)
             mode = record.get("mode", "standard")
+            difficulty = int(record.get("difficulty_level", 0))
             eligibility = "" if record.get("profile_eligible", True) else " [Custom]"
             mods = record.get("selected_modifiers", []) or []
             mod_text = f" Mods:{','.join(mods[:2])}" if mods else ""
-            text = f"#{index} {char_name} / {mode}{eligibility} / {result} / Floor {floor} / Deck {deck_size} / Seed {seed}{mod_text}"
-            draw_text(surface, text, get_font(18), colors.TEXT, (110, y))
+            text = f"#{index} {char_name} / D{difficulty} / {mode}{eligibility} / {result} / Floor {floor} / Deck {deck_size} / Seed {seed}{mod_text}"
+            draw_text(surface, text, get_font(18), colors.TEXT, (90, y))
             y += 38
         for button in self.buttons:
             button.draw(surface)

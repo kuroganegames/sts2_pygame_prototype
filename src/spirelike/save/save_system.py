@@ -111,6 +111,7 @@ class SaveSystem:
                 mode=str(config.get("mode", "standard")),
                 custom=bool(config.get("custom", False)),
                 modifiers=list(config.get("selected_modifiers", []) or []),
+                difficulty_level=int(config.get("difficulty_level", 0)),
             )
         except Exception as exc:
             return SaveSlotSummary(
@@ -232,6 +233,7 @@ class SaveSystem:
             "ancients": len(self.registry.ancients),
             "card_modifiers": len(self.registry.card_modifiers),
             "run_modifiers": len(self.registry.run_modifiers),
+            "difficulty_levels": len(self.registry.difficulty_levels),
             "maps": len(self.registry.maps),
             "events": len(self.registry.events),
         }

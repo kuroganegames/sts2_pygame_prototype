@@ -27,5 +27,6 @@ class SaveSlotSummary:
     mode: str = "standard"
     custom: bool = False
     modifiers: list[str] = field(default_factory=list)
+    difficulty_level: int = 0
     is_corrupt: bool = False
     error: str = ""
