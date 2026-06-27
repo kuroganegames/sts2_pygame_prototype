@@ -73,7 +73,7 @@ class SaveSlotScene(BaseScene):
             self.confirm_overwrite_slot_id = slot.slot_id
             self.message = "既存ランを上書きします。もう一度押すと続行します。"
             return
-        self.app.scene_manager.change("character_select", {"save_slot_id": slot.slot_id})
+        self.app.scene_manager.change("run_setup", {"save_slot_id": slot.slot_id})
 
     def delete_selected(self) -> None:
         slot = self.selected_slot()
@@ -130,9 +130,13 @@ class SaveSlotScene(BaseScene):
             draw_text(surface, "破損したセーブ", get_font(22, bold=True), colors.RED, (rect.x + 18, rect.y + 70))
             draw_wrapped(surface, slot.error, get_font(15), colors.TEXT, pygame.Rect(rect.x + 18, rect.y + 108, rect.width - 36, 160))
             return
+        mode_text = "Custom" if slot.custom else slot.mode
+        modifiers = ", ".join(slot.modifiers[:2]) if slot.modifiers else "-"
         lines = [
             f"{slot.character_name}",
             f"{slot.scene_label} / Floor {slot.floor}",
+            f"Mode: {mode_text}",
+            f"Mods: {modifiers}",
             f"Act {slot.act} / Seed {slot.seed}",
             f"HP {slot.hp}/{slot.max_hp}",
             f"Gold {slot.gold}",
@@ -140,9 +144,9 @@ class SaveSlotScene(BaseScene):
             f"Saved:",
             slot.saved_at[:19].replace("T", " "),
         ]
-        y = rect.y + 72
+        y = rect.y + 66
         for index, line in enumerate(lines):
             color = colors.TEXT if index != 0 else colors.GOLD
-            font = get_font(20, bold=(index == 0)) if index < 6 else get_font(14)
+            font = get_font(18, bold=(index == 0)) if index < 8 else get_font(13)
             draw_text(surface, line, font, color, (rect.x + 18, y))
-            y += 34 if index < 6 else 22
+            y += 28 if index < 8 else 20

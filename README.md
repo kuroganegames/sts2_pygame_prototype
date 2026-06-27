@@ -2,7 +2,7 @@
 
 Pygameで作った、Slay the Spire 2風のシングルプレイ・ローグライクデッキビルダー初期実装です。
 
-公式素材や公式カード名は含めていません。カード、敵、キャラクター、レリック、ポーション、エンシェント、カード修飾、Timeline、イベント、マップ生成ルールをYAMLで管理するためのプロトタイプです。
+公式素材や公式カード名は含めていません。カード、敵、キャラクター、レリック、ポーション、エンシェント、カード修飾、Run Modifier、Timeline、イベント、マップ生成ルールをYAMLで管理するためのプロトタイプです。
 
 ## 起動方法
 
@@ -22,6 +22,9 @@ python main.py
 
 - タイトル画面
 - 保存スロット選択による新規ラン開始 / 続きから
+- 新規ラン開始前のRun Setup
+- 数値または文字列によるシード指定
+- カスタムRun Modifier選択
 - キャラクター選択
 - ラン開始時のエンシェント祝福選択
 - YAMLからコンテンツ読み込み
@@ -74,7 +77,7 @@ id: sharp
 image: sharp.png
 ```
 
-Timeline断片は `content/timeline/*.yaml` で管理します。
+Timeline断片は `content/timeline/*.yaml`、Run Modifierは `content/run_modifiers/*.yaml` で管理します。
 
 ## 主なフォルダ
 
@@ -98,6 +101,7 @@ content/
   potions/
   ancients/
   card_modifiers/
+  run_modifiers/
   timeline/
   statuses/
   maps/

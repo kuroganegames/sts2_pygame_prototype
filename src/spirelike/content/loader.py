@@ -28,6 +28,7 @@ class ContentRegistry:
     ancients: Dict[str, ContentItem] = field(default_factory=dict)
     card_modifiers: Dict[str, ContentItem] = field(default_factory=dict)
     timeline_fragments: Dict[str, ContentItem] = field(default_factory=dict)
+    run_modifiers: Dict[str, ContentItem] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
     def card(self, card_id: str) -> dict[str, Any]:
@@ -63,6 +64,9 @@ class ContentRegistry:
     def timeline_fragment(self, fragment_id: str) -> dict[str, Any]:
         return self.timeline_fragments[fragment_id].data
 
+    def run_modifier(self, modifier_id: str) -> dict[str, Any]:
+        return self.run_modifiers[modifier_id].data
+
     def image_for(self, kind: str, item_id: str) -> Optional[Path]:
         table = getattr(self, kind)
         return table[item_id].image_path
@@ -97,6 +101,15 @@ class ContentLoader:
     MODIFIER_TYPES = {"enchantment", "affliction"}
     MODIFIER_DURATIONS = {"combat", "run", "permanent"}
     MODIFIER_NUMERIC_EVENTS = {"calculate_card_cost", "calculate_card_damage", "calculate_card_block"}
+    RUN_MODIFIER_TYPES = {"bonus", "challenge", "chaos", "utility"}
+    RUN_MODIFIER_EFFECT_TYPES = {
+        "gain_gold",
+        "add_potion_slot",
+        "add_card_to_deck",
+        "gain_relic",
+        "enemy_hp_multiplier",
+        "map_weight_multiplier",
+    }
     TIMELINE_CONDITION_TYPES = {
         "runs_started_at_least",
         "runs_completed_at_least",
@@ -129,6 +142,7 @@ class ContentLoader:
         self._load_collection("ancients", self.registry.ancients, require_image=True, recursive=True)
         self._load_collection("card_modifiers", self.registry.card_modifiers, require_image=True, recursive=True)
         self._load_collection("timeline", self.registry.timeline_fragments, require_image=False, recursive=True)
+        self._load_collection("run_modifiers", self.registry.run_modifiers, require_image=False, recursive=True)
         self._validate_references()
         return self.registry
 
@@ -230,6 +244,9 @@ class ContentLoader:
         for fragment_id, item in self.registry.timeline_fragments.items():
             self._validate_timeline_fragment(fragment_id, item.data)
 
+        for modifier_id, item in self.registry.run_modifiers.items():
+            self._validate_run_modifier(modifier_id, item.data)
+
     def _validate_card_modifier(self, modifier_id: str, data: dict[str, Any]) -> None:
         modifier_type = data.get("type")
         if modifier_type not in self.MODIFIER_TYPES:
@@ -243,6 +260,25 @@ class ContentLoader:
                 self.registry.warnings.append(f"Card modifier {modifier_id} has invalid numeric event: {event}")
         for trigger in data.get("triggers", []) or []:
             self._validate_effects(trigger.get("effects", []), f"card_modifier {modifier_id}.{trigger.get('event', '<event>')}")
+
+    def _validate_run_modifier(self, modifier_id: str, data: dict[str, Any]) -> None:
+        if not data.get("name"):
+            self.registry.warnings.append(f"Run modifier {modifier_id} has no name")
+        modifier_type = data.get("type", "utility")
+        if modifier_type not in self.RUN_MODIFIER_TYPES:
+            self.registry.warnings.append(f"Run modifier {modifier_id} has invalid type: {modifier_type}")
+        effects = data.get("effects", []) or []
+        if not isinstance(effects, list):
+            self.registry.warnings.append(f"Run modifier {modifier_id} effects must be a list")
+            return
+        for effect in effects:
+            effect_type = effect.get("type")
+            if effect_type not in self.RUN_MODIFIER_EFFECT_TYPES:
+                self.registry.warnings.append(f"Run modifier {modifier_id} has invalid effect: {effect_type}")
+            if effect_type == "add_card_to_deck" and effect.get("card") not in self.registry.cards:
+                self.registry.warnings.append(f"Run modifier {modifier_id} references missing card: {effect.get('card')}")
+            if effect_type == "gain_relic" and effect.get("relic") not in self.registry.relics:
+                self.registry.warnings.append(f"Run modifier {modifier_id} references missing relic: {effect.get('relic')}")
 
     def _validate_timeline_fragment(self, fragment_id: str, data: dict[str, Any]) -> None:
         if not data.get("title"):

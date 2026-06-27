@@ -1,17 +1,26 @@
 from __future__ import annotations
 
-import time
-
 from spirelike.content.loader import ContentRegistry
 from spirelike.core.rng import RunRng
+from spirelike.core.seed_utils import random_seed
 from spirelike.models.entities import CardInstance, RelicInstance, PlayerState, RunState
+from spirelike.models.run_config import RunConfig, run_config_to_dict
 from spirelike.profile.run_metrics import RunMetricsSystem
 from spirelike.systems.map_generator import MapGenerator
+from spirelike.systems.run_modifier_system import RunModifierSystem
 
 
-def create_run(registry: ContentRegistry, character_id: str, seed: int | None = None) -> RunState:
+def create_run(
+    registry: ContentRegistry,
+    character_id: str,
+    seed: int | None = None,
+    run_config: RunConfig | dict | None = None,
+) -> RunState:
+    config_dict = run_config_to_dict(run_config)
     if seed is None:
-        seed = int(time.time() * 1000) % 2_147_483_647
+        seed = config_dict.get("seed") or random_seed()
+    seed = int(seed)
+    config_dict["seed"] = seed
     rng = RunRng(seed)
     character = registry.character(character_id)
     deck = [CardInstance(card_id=card_id) for card_id in character.get("starting_deck", [])]
@@ -37,6 +46,10 @@ def create_run(registry: ContentRegistry, character_id: str, seed: int | None = 
         player=player,
         map_state=map_state,
     )
+    run.flags["run_config"] = config_dict
+    RunModifierSystem(registry).apply_run_start_modifiers(run, config_dict)
     RunMetricsSystem.ensure(run)
     run.add_message(f"Seed: {seed}")
+    if config_dict.get("custom"):
+        run.add_message("Custom Run: プロフィール集計対象外")
     return run

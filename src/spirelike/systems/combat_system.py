@@ -22,6 +22,7 @@ from spirelike.systems.card_operation_system import CardOperationSystem
 from spirelike.systems.card_rules import CardRules
 from spirelike.systems.effect_executor import EffectExecutor
 from spirelike.systems.power_system import PowerSystem
+from spirelike.systems.run_modifier_system import RunModifierSystem
 
 
 DURATION_STATUSES = {"weak", "vulnerable"}
@@ -43,6 +44,7 @@ class CombatSystem:
         self.card_rules = CardRules(registry)
         self.power_system = PowerSystem(registry)
         self.card_operation_system = CardOperationSystem(registry, rng)
+        self.run_modifier_system = RunModifierSystem(registry)
         self.action_queue = ActionQueue()
         self.draw_per_turn = 5
         self.executor = EffectExecutor(self)
@@ -104,6 +106,8 @@ class CombatSystem:
         enemy_def = self.registry.enemy(enemy_id)
         hp_def = enemy_def.get("hp", {}) or {}
         hp = self.rng.randint(int(hp_def.get("min", 10)), int(hp_def.get("max", 10)))
+        hp_multiplier = self.run_modifier_system.enemy_hp_multiplier(self.run_state)
+        hp = max(1, int(hp * hp_multiplier))
         RunMetricsSystem.record_enemy_seen(self.run_state, enemy_id)
         return EnemyInstance(
             enemy_id=enemy_id,
