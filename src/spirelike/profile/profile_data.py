@@ -30,6 +30,18 @@ def default_compendium() -> dict[str, dict[str, Any]]:
     }
 
 
+def default_unlocks() -> dict[str, dict[str, Any]]:
+    return {
+        "characters": {},
+        "cards": {},
+        "relics": {},
+        "potions": {},
+        "run_modifiers": {},
+        "ancients": {},
+        "card_modifiers": {},
+    }
+
+
 @dataclass
 class ProfileState:
     schema_version: int = CURRENT_PROFILE_SCHEMA_VERSION
@@ -42,6 +54,7 @@ class ProfileState:
     bestiary: dict[str, dict[str, Any]] = field(default_factory=dict)
     compendium: dict[str, dict[str, Any]] = field(default_factory=default_compendium)
     timeline: dict[str, Any] = field(default_factory=lambda: {"unlocked_fragments": []})
+    unlocks: dict[str, dict[str, Any]] = field(default_factory=default_unlocks)
 
     def ensure_defaults(self) -> None:
         base_summary = default_summary()
@@ -50,4 +63,7 @@ class ProfileState:
         base_compendium = default_compendium()
         for key, value in base_compendium.items():
             self.compendium.setdefault(key, value)
+        base_unlocks = default_unlocks()
+        for key, value in base_unlocks.items():
+            self.unlocks.setdefault(key, value)
         self.timeline.setdefault("unlocked_fragments", [])

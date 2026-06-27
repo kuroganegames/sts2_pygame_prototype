@@ -18,6 +18,14 @@ class CompendiumScene(BaseScene):
         ("ancients", "Ancient"),
     ]
 
+    CATEGORY_TO_TARGET = {
+        "cards": "card",
+        "relics": "relic",
+        "potions": "potion",
+        "card_modifiers": "card_modifier",
+        "ancients": "ancient",
+    }
+
     def __init__(self, app, payload: dict) -> None:
         super().__init__(app, payload)
         self.profile = app.profile_system.profile
@@ -44,12 +52,33 @@ class CompendiumScene(BaseScene):
         for index, item_id in enumerate(items):
             entry = discovered.get(item_id, {})
             seen = bool(entry.get("seen"))
+            locked = not self.is_unlocked(item_id)
+            hidden = self.is_hidden(item_id)
             rect = pygame.Rect(x + (index % 2) * 540, y + (index // 2) * 62, 500, 48)
             pygame.draw.rect(surface, colors.PANEL, rect, border_radius=8)
-            name = self._display_name(item_id) if seen else "???"
-            draw_text(surface, name, get_font(18, bold=True), colors.GOLD if seen else colors.MUTED, (rect.x + 14, rect.y + 8))
-            detail = self._entry_detail(entry) if seen else "未発見"
+            if locked and hidden:
+                name = "???"
+                detail = "未解放"
+            elif locked:
+                name = self._display_name(item_id)
+                detail = "未解放"
+            else:
+                name = self._display_name(item_id) if seen else "???"
+                detail = self._entry_detail(entry) if seen else "未発見"
+            draw_text(surface, name, get_font(18, bold=True), colors.GOLD if seen and not locked else colors.MUTED, (rect.x + 14, rect.y + 8))
             draw_text(surface, detail, get_font(14), colors.TEXT, (rect.x + 220, rect.y + 12))
+
+    def is_unlocked(self, item_id: str) -> bool:
+        target_type = self.CATEGORY_TO_TARGET.get(self.category)
+        if not target_type:
+            return True
+        return self.app.unlock_system.is_unlocked(self.profile, target_type, item_id)
+
+    def is_hidden(self, item_id: str) -> bool:
+        target_type = self.CATEGORY_TO_TARGET.get(self.category)
+        if not target_type:
+            return False
+        return self.app.unlock_system.is_hidden_until_unlocked(target_type, item_id)
 
     def _registry_items(self) -> list[str]:
         if self.category == "cards":

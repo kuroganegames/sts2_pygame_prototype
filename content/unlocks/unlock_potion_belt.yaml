@@ -1,0 +1,9 @@
+schema_version: 1
+id: unlock_potion_belt
+target_type: run_modifier
+target_id: potion_belt
+initially_unlocked: true
+hidden_until_unlocked: false
+name: 薬帯Modifier
+description: 最初から使用可能。
+conditions: []

@@ -1,0 +1,11 @@
+schema_version: 1
+id: unlock_stronger_enemies
+target_type: run_modifier
+target_id: stronger_enemies
+initially_unlocked: false
+hidden_until_unlocked: false
+name: 強敵Modifier解放
+description: 通常ランで1回勝利すると、Run Modifier「強敵」が使用可能になる。
+conditions:
+  - type: victories_at_least
+    amount: 1

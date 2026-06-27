@@ -10,6 +10,7 @@ from spirelike.profile.run_metrics import RunMetricsSystem
 from spirelike.systems.actions import TriggerEventAction
 from spirelike.systems.card_modifier_system import CardModifierSystem
 from spirelike.systems.card_selection_system import CardSelectionSystem
+from spirelike.systems.unlock_system import UnlockSystem
 
 
 class CardOperationSystem:
@@ -17,6 +18,7 @@ class CardOperationSystem:
         self.registry = registry
         self.selection = CardSelectionSystem(registry)
         self.card_modifiers = CardModifierSystem(registry)
+        self.unlocks = UnlockSystem(registry)
         self.rng = rng or random.Random()
 
     def apply_result(
@@ -203,6 +205,8 @@ class CardOperationSystem:
         candidates: list[str] = []
         for card_id, item in self.registry.cards.items():
             card_def = item.data
+            if not self.unlocks.run_has_unlocked(run_state, "cards", card_id):
+                continue
             if pool_def.get("exclude_current_card", True) and card_id == card.card_id:
                 continue
             if pool_def.get("exclude_basic", True) and card_def.get("rarity") == "basic":

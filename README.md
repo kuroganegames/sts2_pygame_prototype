@@ -2,7 +2,7 @@
 
 Pygameで作った、Slay the Spire 2風のシングルプレイ・ローグライクデッキビルダー初期実装です。
 
-公式素材や公式カード名は含めていません。カード、敵、キャラクター、レリック、ポーション、エンシェント、カード修飾、Run Modifier、Difficulty、Timeline、イベント、マップ生成ルールをYAMLで管理するためのプロトタイプです。
+公式素材や公式カード名は含めていません。カード、敵、キャラクター、レリック、ポーション、エンシェント、カード修飾、Run Modifier、Difficulty、Unlock、Timeline、イベント、マップ生成ルールをYAMLで管理するためのプロトタイプです。
 
 ## 起動方法
 
@@ -25,8 +25,10 @@ python main.py
 - 新規ラン開始前のRun Setup
 - 数値または文字列によるシード指定
 - カスタムRun Modifier選択
+- Unlock条件に応じたRun Modifier選択制御
 - キャラクター選択時のDifficulty Level選択
 - キャラクター別Difficulty進行 / 勝利時の次段階解放
+- Unlock YAMLによるコンテンツ解放制御
 - ラン開始時のエンシェント祝福選択
 - YAMLからコンテンツ読み込み
 - YAMLからマップランダム生成
@@ -39,7 +41,7 @@ python main.py
 - 安全地点でのオートセーブ / タイトルからのラン再開
 - 複数セーブスロットによる並行ラン管理
 - 戦闘中の安定状態での「保存して終了」/ CombatSnapshot再開
-- profile.jsonによるラン履歴 / 敵図鑑 / コレクション / Timeline記録
+- profile.jsonによるラン履歴 / 敵図鑑 / コレクション / Timeline / Unlock記録
 - ポーションの獲得、購入、戦闘中使用
 - 敵Intentと簡易AI
 - 戦闘報酬、カード追加、レリック獲得、ポーション獲得
@@ -78,7 +80,7 @@ id: sharp
 image: sharp.png
 ```
 
-Timeline断片は `content/timeline/*.yaml`、Run Modifierは `content/run_modifiers/*.yaml`、Difficulty Levelは `content/difficulty_levels/*.yaml` で管理します。
+Timeline断片は `content/timeline/*.yaml`、Run Modifierは `content/run_modifiers/*.yaml`、Difficulty Levelは `content/difficulty_levels/*.yaml`、Unlock Ruleは `content/unlocks/*.yaml` で管理します。
 
 ## 主なフォルダ
 
@@ -88,10 +90,10 @@ src/spirelike/
   content/    YAMLローダー、ContentRegistry
   core/       RunState、CombatState、RNG、ラン生成
   models/     Dataclass群
-  profile/    profile.json、ラン履歴、図鑑、Timeline
+  profile/    profile.json、ラン履歴、図鑑、Timeline、Unlock状態
   save/       JSONセーブ / ロード / 複数スロット / CombatSnapshot
   scenes/     画面
-  systems/    戦闘、効果実行、報酬、マップ生成、ショップなど
+  systems/    戦闘、効果実行、報酬、マップ生成、ショップ、Unlockなど
   ui/         ボタン、カード表示、ポーション表示、テキスト描画
 
 content/
@@ -104,6 +106,7 @@ content/
   card_modifiers/
   run_modifiers/
   difficulty_levels/
+  unlocks/
   timeline/
   statuses/
   maps/

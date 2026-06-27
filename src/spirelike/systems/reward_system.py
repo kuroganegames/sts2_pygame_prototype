@@ -7,6 +7,7 @@ from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, RelicInstance, RunState
 from spirelike.profile.run_metrics import RunMetricsSystem
 from spirelike.systems.potion_system import PotionSystem
+from spirelike.systems.unlock_system import UnlockSystem
 
 
 @dataclass
@@ -17,7 +18,6 @@ class RewardBundle:
     relic_id: str | None = None
     potion_id: str | None = None
     message: str = ""
-    # セーブ/ロード時にRewardSceneで二重付与しないためのフラグ。
     base_applied: bool = False
 
 
@@ -25,6 +25,7 @@ class RewardSystem:
     def __init__(self, registry: ContentRegistry) -> None:
         self.registry = registry
         self.potions = PotionSystem(registry)
+        self.unlocks = UnlockSystem(registry)
 
     def combat_reward(self, run_state: RunState, node_type: str, rng: random.Random) -> RewardBundle:
         if node_type == "elite":
@@ -45,13 +46,13 @@ class RewardSystem:
         cards = self.card_choices(run_state, rng, choices=3, force_rare=(node_type == "boss"))
         potion = None
         if self.potions.has_empty_slot(run_state) and rng.random() < potion_chance:
-            potion = self.potions.random_potion(rng)
+            potion = self.potions.random_potion(rng, run_state=run_state)
         return RewardBundle(title=title, gold=gold, card_choices=cards, relic_id=relic, potion_id=potion)
 
     def treasure_reward(self, run_state: RunState, rng: random.Random) -> RewardBundle:
         relic = self.random_relic(run_state, rng, allow_boss=False)
         gold = rng.randint(20, 45)
-        potion = self.potions.random_potion(rng) if self.potions.has_empty_slot(run_state) else None
+        potion = self.potions.random_potion(rng, run_state=run_state) if self.potions.has_empty_slot(run_state) else None
         return RewardBundle(title="宝箱", gold=gold, relic_id=relic, potion_id=potion, message="宝箱から報酬を得た。")
 
     def card_choices(
@@ -69,6 +70,8 @@ class RewardSystem:
             rarity = card.get("rarity", "common")
             card_type = card.get("type")
             if rarity == "basic" or card_type in {"status", "curse"}:
+                continue
+            if not self.unlocks.run_has_unlocked(run_state, "cards", card_id):
                 continue
             if card.get("character") not in {character_id, "neutral"}:
                 continue
@@ -94,6 +97,8 @@ class RewardSystem:
         candidates = []
         for relic_id, item in self.registry.relics.items():
             rarity = item.data.get("rarity", "common")
+            if not self.unlocks.run_has_unlocked(run_state, "relics", relic_id):
+                continue
             if relic_id in owned and item.data.get("unique", True):
                 continue
             if rarity == "starter":
