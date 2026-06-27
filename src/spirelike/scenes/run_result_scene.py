@@ -14,7 +14,9 @@ class RunResultScene(BaseScene):
         self.result = payload.get("result", "defeat")
         if self.run_state:
             app.profile_system.finalize_run(self.run_state, self.result)
-        app.save_system.delete_save()
+            app.save_system.delete_slot(self.run_state.flags.get("save_slot_id"))
+        else:
+            app.save_system.delete_save()
         self.buttons = [
             Button((500, 500, 280, 58), "タイトルへ", lambda: app.scene_manager.change("title")),
             Button((500, 575, 280, 58), "終了", app.quit),
@@ -33,10 +35,11 @@ class RunResultScene(BaseScene):
                 f"Deck: {len(p.deck)} cards",
                 f"Relics: {len(p.relics)}",
                 f"Seed: {self.run_state.seed}",
+                f"Slot: {self.run_state.flags.get('save_slot_id', '-')}",
             ]
-            y = 240
+            y = 230
             for line in lines:
                 draw_text(surface, line, get_font(24), colors.TEXT, (640, y), center=True)
-                y += 38
+                y += 36
         for button in self.buttons:
             button.draw(surface)

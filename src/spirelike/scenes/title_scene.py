@@ -13,7 +13,7 @@ class TitleScene(BaseScene):
     def __init__(self, app, payload: dict) -> None:
         super().__init__(app, payload)
         w, h = app.settings.screen_width, app.settings.screen_height
-        has_save = app.save_system.save_exists()
+        has_save = app.save_system.any_save_exists()
         self.buttons = [
             Button((w // 2 - 140, h // 2 + 30, 280, 54), "ラン開始", self.start),
             Button((w // 2 - 140, h // 2 + 96, 280, 54), "続きから", self.continue_run, enabled=has_save),
@@ -22,10 +22,10 @@ class TitleScene(BaseScene):
         ]
 
     def start(self) -> None:
-        self.app.scene_manager.change("character_select")
+        self.app.scene_manager.change("save_slot", {"mode": "new"})
 
     def continue_run(self) -> None:
-        self.app.continue_saved_run()
+        self.app.scene_manager.change("save_slot", {"mode": "load"})
 
     def profile(self) -> None:
         self.app.scene_manager.change("profile")

@@ -11,6 +11,7 @@ from spirelike.profile.profile_system import ProfileSystem
 from spirelike.save.save_system import SaveSystem
 from spirelike.scenes.title_scene import TitleScene
 from spirelike.scenes.character_select_scene import CharacterSelectScene
+from spirelike.scenes.save_slot_scene import SaveSlotScene
 from spirelike.scenes.ancient_scene import AncientScene
 from spirelike.scenes.map_scene import MapScene
 from spirelike.scenes.combat_scene import CombatScene
@@ -55,6 +56,7 @@ class GameApp:
 
     def _register_scenes(self) -> None:
         self.scene_manager.register("title", lambda app, payload: TitleScene(app, payload))
+        self.scene_manager.register("save_slot", lambda app, payload: SaveSlotScene(app, payload))
         self.scene_manager.register(
             "character_select", lambda app, payload: CharacterSelectScene(app, payload)
         )
@@ -90,9 +92,9 @@ class GameApp:
         except Exception as exc:  # autosave失敗でゲームを止めない
             run_state.add_message(f"Autosave failed: {exc}")
 
-    def continue_saved_run(self) -> bool:
+    def continue_saved_run(self, slot_id: str | None = None) -> bool:
         try:
-            run_state, scene_name, payload = self.save_system.load_run()
+            run_state, scene_name, payload = self.save_system.load_run(slot_id)
         except Exception as exc:
             self.last_load_error = str(exc)
             return False

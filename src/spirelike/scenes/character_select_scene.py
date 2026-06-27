@@ -15,8 +15,9 @@ from spirelike.ui.text import draw_text, draw_wrapped
 class CharacterSelectScene(BaseScene):
     def __init__(self, app, payload: dict) -> None:
         super().__init__(app, payload)
+        self.save_slot_id = payload.get("save_slot_id", "slot_001")
         self.character_rects: list[tuple[str, pygame.Rect]] = []
-        self.buttons = [Button((30, 30, 130, 44), "戻る", lambda: app.scene_manager.change("title"))]
+        self.buttons = [Button((30, 30, 130, 44), "戻る", lambda: app.scene_manager.change("save_slot", {"mode": "new"}))]
         self._layout()
 
     def _layout(self) -> None:
@@ -37,6 +38,7 @@ class CharacterSelectScene(BaseScene):
 
     def start_run(self, character_id: str) -> None:
         run = create_run(self.app.registry, character_id)
+        run.flags["save_slot_id"] = self.save_slot_id
         RunMetricsSystem.ensure(run)
         self.app.profile_system.record_run_started(run)
         self.app.run_state = run
@@ -49,6 +51,7 @@ class CharacterSelectScene(BaseScene):
     def draw(self, surface) -> None:
         surface.fill(colors.BG)
         draw_text(surface, "キャラクター選択", get_font(44, bold=True), colors.TEXT, (640, 70), center=True)
+        draw_text(surface, f"保存先: {self.save_slot_id}", get_font(18), colors.MUTED, (640, 112), center=True)
         for character_id, rect in self.character_rects:
             character = self.app.registry.character(character_id)
             hovered = rect.collidepoint(pygame.mouse.get_pos())

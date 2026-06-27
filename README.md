@@ -21,6 +21,7 @@ python main.py
 ## 現在できること
 
 - タイトル画面
+- 保存スロット選択による新規ラン開始 / 続きから
 - キャラクター選択
 - ラン開始時のエンシェント祝福選択
 - YAMLからコンテンツ読み込み
@@ -32,6 +33,7 @@ python main.py
 - Powerカード / Exhaust / Retain / Ethereal / Innate / Unplayable
 - Enchantment / Affliction によるカード1枚単位の修飾
 - 安全地点でのオートセーブ / タイトルからのラン再開
+- 複数セーブスロットによる並行ラン管理
 - 戦闘中の安定状態での「保存して終了」/ CombatSnapshot再開
 - profile.jsonによるラン履歴 / 敵図鑑 / コレクション / Timeline記録
 - ポーションの獲得、購入、戦闘中使用
@@ -40,6 +42,19 @@ python main.py
 - 休憩所で回復またはカード強化
 - イベントYAMLの選択肢実行
 - 簡易ショップ
+
+## セーブファイル
+
+```text
+saves/
+  slots/
+    slot_001.json
+    slot_002.json
+    slot_003.json
+  profile.json
+```
+
+旧形式の `saves/save_001.json` がある場合は、初回のスロット一覧取得時に `saves/slots/slot_001.json` へ移行し、旧ファイルは `saves/save_001.migrated.bak` として残します。
 
 ## データ追加ルール
 
@@ -70,7 +85,7 @@ src/spirelike/
   core/       RunState、CombatState、RNG、ラン生成
   models/     Dataclass群
   profile/    profile.json、ラン履歴、図鑑、Timeline
-  save/       JSONセーブ / ロード / CombatSnapshot
+  save/       JSONセーブ / ロード / 複数スロット / CombatSnapshot
   scenes/     画面
   systems/    戦闘、効果実行、報酬、マップ生成、ショップなど
   ui/         ボタン、カード表示、ポーション表示、テキスト描画

@@ -9,13 +9,18 @@ class SaveMigrationError(ValueError):
 
 def migrate_save(data: dict) -> dict:
     version = int(data.get("schema_version", 0))
-    if version == CURRENT_SAVE_SCHEMA_VERSION:
-        return data
     if version == 0:
         data = migrate_v0_to_v1(data)
         version = int(data.get("schema_version", 0))
     if version != CURRENT_SAVE_SCHEMA_VERSION:
         raise SaveMigrationError(f"Unsupported save schema: {version}")
+
+    # PR7で追加されたスロット情報は、旧saveでも補完できるメタデータとして扱う。
+    data.setdefault("save_slot_id", "slot_001")
+    data.setdefault("display_name", "Slot 1")
+    run = data.get("run", {}) or {}
+    flags = run.setdefault("flags", {})
+    flags.setdefault("save_slot_id", data["save_slot_id"])
     return data
 
 
