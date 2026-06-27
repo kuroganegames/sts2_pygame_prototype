@@ -6,11 +6,13 @@ from typing import Optional
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import EnemyInstance, PotionInstance, RunState
 from spirelike.profile.run_metrics import RunMetricsSystem
+from spirelike.systems.unlock_system import UnlockSystem
 
 
 class PotionSystem:
     def __init__(self, registry: ContentRegistry) -> None:
         self.registry = registry
+        self.unlocks = UnlockSystem(registry)
 
     def first_empty_slot(self, run_state: RunState) -> int | None:
         return run_state.player.first_empty_potion_slot()
@@ -38,7 +40,7 @@ class PotionSystem:
         rng: random.Random,
         rarity_weights: dict[str, int | float] | None = None,
     ) -> str | None:
-        potion_id = self.random_potion(rng, rarity_weights=rarity_weights)
+        potion_id = self.random_potion(rng, rarity_weights=rarity_weights, run_state=run_state)
         if potion_id and self.grant_potion(run_state, potion_id):
             return potion_id
         return None
@@ -47,18 +49,23 @@ class PotionSystem:
         self,
         rng: random.Random,
         rarity_weights: dict[str, int | float] | None = None,
+        run_state: RunState | None = None,
     ) -> str | None:
         if not self.registry.potions:
             return None
         rarity_weights = rarity_weights or {"common": 65, "uncommon": 25, "rare": 10}
         candidates: list[tuple[str, float]] = []
         for potion_id, item in self.registry.potions.items():
+            if run_state is not None and not self.unlocks.run_has_unlocked(run_state, "potions", potion_id):
+                continue
             rarity = str(item.data.get("rarity", "common"))
             weight = float(rarity_weights.get(rarity, 0))
             if weight > 0:
                 candidates.append((potion_id, weight))
         if not candidates:
-            candidates = [(potion_id, 1.0) for potion_id in self.registry.potions]
+            candidates = [(potion_id, 1.0) for potion_id in self.registry.potions if run_state is None or self.unlocks.run_has_unlocked(run_state, "potions", potion_id)]
+        if not candidates:
+            return None
         return self._weighted_choice(candidates, rng)
 
     def discard_potion(self, run_state: RunState, slot_index: int) -> bool:

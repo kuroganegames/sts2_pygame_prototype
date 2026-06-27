@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from spirelike.profile.profile_data import ProfileState, CURRENT_PROFILE_SCHEMA_VERSION, default_compendium, default_summary
+from spirelike.profile.profile_data import (
+    ProfileState,
+    CURRENT_PROFILE_SCHEMA_VERSION,
+    default_compendium,
+    default_summary,
+    default_unlocks,
+)
 
 
 def profile_to_dict(profile: ProfileState) -> dict:
@@ -16,6 +22,7 @@ def profile_to_dict(profile: ProfileState) -> dict:
         "bestiary": dict(profile.bestiary),
         "compendium": dict(profile.compendium),
         "timeline": dict(profile.timeline),
+        "unlocks": dict(profile.unlocks),
     }
 
 
@@ -31,6 +38,7 @@ def profile_from_dict(data: dict) -> ProfileState:
         bestiary=dict(data.get("bestiary", {}) or {}),
         compendium=dict(data.get("compendium", {}) or default_compendium()),
         timeline=dict(data.get("timeline", {}) or {"unlocked_fragments": []}),
+        unlocks=dict(data.get("unlocks", {}) or default_unlocks()),
     )
     profile.ensure_defaults()
     return profile

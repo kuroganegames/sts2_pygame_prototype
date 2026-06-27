@@ -27,6 +27,7 @@ from spirelike.scenes.bestiary_scene import BestiaryScene
 from spirelike.scenes.compendium_scene import CompendiumScene
 from spirelike.scenes.timeline_scene import TimelineScene
 from spirelike.scenes.run_result_scene import RunResultScene
+from spirelike.systems.unlock_system import UnlockSystem
 
 
 class GameApp:
@@ -50,6 +51,7 @@ class GameApp:
         self.registry = ContentLoader(content_dir).load()
         self.save_system = SaveSystem(project_root, self.registry)
         self.profile_system = ProfileSystem(project_root, self.registry)
+        self.unlock_system = UnlockSystem(self.registry)
 
         self.scene_manager = SceneManager(self)
         self._register_scenes()
@@ -91,7 +93,7 @@ class GameApp:
                 current_scene=scene_name,
                 scene_payload=safe_payload,
             )
-        except Exception as exc:  # autosave失敗でゲームを止めない
+        except Exception as exc:
             run_state.add_message(f"Autosave failed: {exc}")
 
     def continue_saved_run(self, slot_id: str | None = None) -> bool:

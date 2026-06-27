@@ -30,6 +30,7 @@ class ContentRegistry:
     timeline_fragments: Dict[str, ContentItem] = field(default_factory=dict)
     run_modifiers: Dict[str, ContentItem] = field(default_factory=dict)
     difficulty_levels: Dict[str, ContentItem] = field(default_factory=dict)
+    unlock_rules: Dict[str, ContentItem] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
     def card(self, card_id: str) -> dict[str, Any]:
@@ -70,6 +71,9 @@ class ContentRegistry:
 
     def difficulty_level(self, difficulty_id: str) -> dict[str, Any]:
         return self.difficulty_levels[difficulty_id].data
+
+    def unlock_rule(self, unlock_id: str) -> dict[str, Any]:
+        return self.unlock_rules[unlock_id].data
 
     def image_for(self, kind: str, item_id: str) -> Optional[Path]:
         table = getattr(self, kind)
@@ -119,21 +123,38 @@ class ContentLoader:
         "enemy_damage_multiplier",
         "player_max_hp_delta",
     }
-    TIMELINE_CONDITION_TYPES = {
+    UNLOCK_TARGET_TYPES = {
+        "character",
+        "card",
+        "relic",
+        "potion",
+        "run_modifier",
+        "ancient",
+        "card_modifier",
+    }
+    CONDITION_TYPES = {
         "runs_started_at_least",
         "runs_completed_at_least",
         "victories_at_least",
+        "character_victories_at_least",
+        "character_difficulty_victory_at_least",
+        "character_difficulty_unlocked_at_least",
+        "any_character_difficulty_unlocked_at_least",
         "enemy_seen",
         "enemy_defeated",
         "enemy_defeated_count_at_least",
         "card_seen",
+        "card_acquired_count_at_least",
         "card_played_count_at_least",
         "relic_acquired",
         "potion_used",
+        "potion_used_count_at_least",
         "modifier_applied",
         "modifier_applied_count_at_least",
         "ancient_choice",
+        "timeline_unlocked",
     }
+    TIMELINE_CONDITION_TYPES = CONDITION_TYPES
 
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -153,6 +174,7 @@ class ContentLoader:
         self._load_collection("timeline", self.registry.timeline_fragments, require_image=False, recursive=True)
         self._load_collection("run_modifiers", self.registry.run_modifiers, require_image=False, recursive=True)
         self._load_collection("difficulty_levels", self.registry.difficulty_levels, require_image=False, recursive=True)
+        self._load_collection("unlocks", self.registry.unlock_rules, require_image=False, recursive=True)
         self._validate_references()
         return self.registry
 
@@ -258,6 +280,7 @@ class ContentLoader:
             self._validate_run_modifier(modifier_id, item.data)
 
         self._validate_difficulty_levels()
+        self._validate_unlock_rules()
 
     def _validate_card_modifier(self, modifier_id: str, data: dict[str, Any]) -> None:
         modifier_type = data.get("type")
@@ -316,29 +339,68 @@ class ContentLoader:
         if self.registry.difficulty_levels and 0 not in seen_levels:
             self.registry.warnings.append("Difficulty level 0 is missing")
 
+    def _validate_unlock_rules(self) -> None:
+        seen_targets: set[tuple[str, str]] = set()
+        for unlock_id, item in self.registry.unlock_rules.items():
+            data = item.data
+            target_type = data.get("target_type")
+            target_id = data.get("target_id")
+            if target_type not in self.UNLOCK_TARGET_TYPES:
+                self.registry.warnings.append(f"Unlock {unlock_id} has invalid target_type: {target_type}")
+                continue
+            if not target_id:
+                self.registry.warnings.append(f"Unlock {unlock_id} has no target_id")
+                continue
+            target_key = (str(target_type), str(target_id))
+            if target_key in seen_targets:
+                self.registry.warnings.append(f"Duplicate unlock target: {target_type}.{target_id}")
+            seen_targets.add(target_key)
+            if not self._target_exists(str(target_type), str(target_id)):
+                self.registry.warnings.append(f"Unlock {unlock_id} references missing target: {target_type}.{target_id}")
+            self._validate_conditions(data.get("conditions", []) or [], f"unlock {unlock_id}")
+
+    def _target_exists(self, target_type: str, target_id: str) -> bool:
+        tables = {
+            "character": self.registry.characters,
+            "card": self.registry.cards,
+            "relic": self.registry.relics,
+            "potion": self.registry.potions,
+            "run_modifier": self.registry.run_modifiers,
+            "ancient": self.registry.ancients,
+            "card_modifier": self.registry.card_modifiers,
+        }
+        return target_id in tables.get(target_type, {})
+
     def _validate_timeline_fragment(self, fragment_id: str, data: dict[str, Any]) -> None:
         if not data.get("title"):
             self.registry.warnings.append(f"Timeline fragment {fragment_id} has no title")
         conditions = data.get("unlock_conditions", []) or []
+        self._validate_conditions(conditions, f"timeline {fragment_id}")
+
+    def _validate_conditions(self, conditions: Iterable[dict[str, Any]], where: str) -> None:
         if not isinstance(conditions, list):
-            self.registry.warnings.append(f"Timeline fragment {fragment_id} unlock_conditions must be a list")
+            self.registry.warnings.append(f"{where} conditions must be a list")
             return
         for condition in conditions:
             condition_type = condition.get("type")
-            if condition_type not in self.TIMELINE_CONDITION_TYPES:
-                self.registry.warnings.append(f"Timeline fragment {fragment_id} has invalid condition: {condition_type}")
+            if condition_type not in self.CONDITION_TYPES:
+                self.registry.warnings.append(f"{where} has invalid condition: {condition_type}")
             if condition.get("enemy") and condition["enemy"] not in self.registry.enemies:
-                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing enemy: {condition['enemy']}")
+                self.registry.warnings.append(f"{where} references missing enemy: {condition['enemy']}")
             if condition.get("card") and condition["card"] not in self.registry.cards:
-                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing card: {condition['card']}")
+                self.registry.warnings.append(f"{where} references missing card: {condition['card']}")
             if condition.get("relic") and condition["relic"] not in self.registry.relics:
-                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing relic: {condition['relic']}")
+                self.registry.warnings.append(f"{where} references missing relic: {condition['relic']}")
             if condition.get("potion") and condition["potion"] not in self.registry.potions:
-                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing potion: {condition['potion']}")
+                self.registry.warnings.append(f"{where} references missing potion: {condition['potion']}")
             if condition.get("modifier") and condition["modifier"] not in self.registry.card_modifiers:
-                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing modifier: {condition['modifier']}")
+                self.registry.warnings.append(f"{where} references missing modifier: {condition['modifier']}")
             if condition.get("ancient") and condition["ancient"] not in self.registry.ancients:
-                self.registry.warnings.append(f"Timeline fragment {fragment_id} references missing ancient: {condition['ancient']}")
+                self.registry.warnings.append(f"{where} references missing ancient: {condition['ancient']}")
+            if condition.get("fragment") and condition["fragment"] not in self.registry.timeline_fragments:
+                self.registry.warnings.append(f"{where} references missing timeline fragment: {condition['fragment']}")
+            if condition.get("character") and condition["character"] not in self.registry.characters:
+                self.registry.warnings.append(f"{where} references missing character: {condition['character']}")
 
     def _validate_effects(self, effects: Iterable[dict[str, Any]], where: str) -> None:
         for effect in effects or []:

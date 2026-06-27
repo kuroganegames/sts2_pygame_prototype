@@ -7,6 +7,7 @@ from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import RunState
 from spirelike.systems.potion_system import PotionSystem
 from spirelike.systems.reward_system import RewardSystem
+from spirelike.systems.unlock_system import UnlockSystem
 
 
 @dataclass
@@ -28,6 +29,7 @@ class ShopSystem:
         self.registry = registry
         self.rewards = RewardSystem(registry)
         self.potions = PotionSystem(registry)
+        self.unlocks = UnlockSystem(registry)
 
     def generate_card_offers(self, run_state: RunState, rng: random.Random, count: int = 5) -> list[ShopOffer]:
         card_ids = self.rewards.card_choices(run_state, rng, choices=count)
@@ -42,8 +44,8 @@ class ShopSystem:
             offers.append(ShopOffer(card_id=card_id, price=rng.randint(lo, hi)))
         return offers
 
-    def generate_potion_offers(self, rng: random.Random, count: int = 3) -> list[PotionOffer]:
-        potion_ids = list(self.registry.potions.keys())
+    def generate_potion_offers(self, run_state: RunState, rng: random.Random, count: int = 3) -> list[PotionOffer]:
+        potion_ids = self.unlocks.filter_run_ids(run_state, "potions", self.registry.potions.keys())
         rng.shuffle(potion_ids)
         offers: list[PotionOffer] = []
         for potion_id in potion_ids[:count]:

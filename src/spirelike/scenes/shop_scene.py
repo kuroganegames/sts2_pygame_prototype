@@ -4,6 +4,7 @@ import pygame
 
 from spirelike.core.rng import RunRng
 from spirelike.models.entities import CardInstance
+from spirelike.profile.run_metrics import RunMetricsSystem
 from spirelike.scenes.base_scene import BaseScene
 from spirelike.systems.potion_system import PotionSystem
 from spirelike.systems.shop_system import ShopSystem
@@ -24,7 +25,7 @@ class ShopScene(BaseScene):
         self.shop_system = ShopSystem(app.registry)
         self.potion_system = PotionSystem(app.registry)
         self.offers = self.shop_system.generate_card_offers(self.run_state, rngs.shop, count=5)
-        self.potion_offers = self.shop_system.generate_potion_offers(rngs.shop, count=3)
+        self.potion_offers = self.shop_system.generate_potion_offers(self.run_state, rngs.shop, count=3)
         self.card_rects: dict[int, pygame.Rect] = {}
         self.potion_rects: dict[int, pygame.Rect] = {}
         self.buttons = [Button((540, 620, 200, 52), "店を出る", self.finish)]
@@ -42,6 +43,7 @@ class ShopScene(BaseScene):
                     if not offer.sold and self.run_state.player.gold >= offer.price:
                         self.run_state.player.gold -= offer.price
                         self.run_state.player.deck.append(CardInstance(card_id=offer.card_id))
+                        RunMetricsSystem.record_card_acquired(self.run_state, offer.card_id)
                         offer.sold = True
                         self.run_state.add_message(f"購入: {self.app.registry.card(offer.card_id).get('name', offer.card_id)}")
                     return

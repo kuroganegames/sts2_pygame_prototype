@@ -13,12 +13,14 @@ from spirelike.profile.profile_serializer import profile_from_dict, profile_to_d
 from spirelike.profile.run_metrics import RunMetricsSystem, now_iso
 from spirelike.profile.timeline_conditions import condition_met
 from spirelike.systems.difficulty_system import DifficultySystem
+from spirelike.systems.unlock_system import UnlockSystem
 
 
 class ProfileSystem:
     def __init__(self, project_root: Path, registry: ContentRegistry) -> None:
         self.project_root = project_root
         self.registry = registry
+        self.unlock_system = UnlockSystem(registry)
         self.profile_path = project_root / "saves" / "profile.json"
         self.profile = self.load_or_create()
 
@@ -27,6 +29,7 @@ class ProfileSystem:
             data = json.loads(self.profile_path.read_text(encoding="utf-8"))
             profile = profile_from_dict(data)
             profile.ensure_defaults()
+            self.unlock_system.ensure_initial_unlocks(profile)
             return profile
         now = now_iso()
         profile = ProfileState(
@@ -36,6 +39,7 @@ class ProfileSystem:
             updated_at=now,
         )
         profile.ensure_defaults()
+        self.unlock_system.ensure_initial_unlocks(profile)
         return profile
 
     def save(self) -> None:
@@ -81,6 +85,10 @@ class ProfileSystem:
             for fragment_id in new_fragments:
                 title = self.registry.timeline_fragment(fragment_id).get("title", fragment_id)
                 run_state.add_message(f"Timeline解放: {title}")
+            new_unlocks = self.unlock_system.evaluate_unlocks(self.profile)
+            for rule in new_unlocks:
+                name = rule.get("name") or f"{rule.get('target_type')}:{rule.get('target_id')}"
+                run_state.add_message(f"Unlock: {name}")
         self.save()
 
     def build_run_record(self, run_state: RunState, result: str, metrics: dict[str, Any]) -> dict[str, Any]:

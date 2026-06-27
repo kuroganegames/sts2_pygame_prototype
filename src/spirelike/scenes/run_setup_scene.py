@@ -43,15 +43,21 @@ class RunSetupScene(BaseScene):
         self.custom_enabled = True
         self.error_message = "カスタムランはプロフィール集計対象外です。"
 
+    def unlocked_run_modifiers(self) -> set[str]:
+        profile = self.app.profile_system.profile
+        return set(self.app.unlock_system.build_unlocked_snapshot(profile).get("run_modifiers", []))
+
     def build_run_config(self) -> RunConfig:
         seed = seed_from_text(self.seed_text)
-        has_custom_modifiers = self.custom_enabled and bool(self.selected_modifiers)
+        unlocked = self.unlocked_run_modifiers()
+        selected = sorted(modifier_id for modifier_id in self.selected_modifiers if modifier_id in unlocked)
+        has_custom_modifiers = self.custom_enabled and bool(selected)
         mode = "custom" if self.custom_enabled else "seeded"
         return RunConfig(
             mode=mode,
             seed=seed,
             custom=self.custom_enabled,
-            selected_modifiers=sorted(self.selected_modifiers) if self.custom_enabled else [],
+            selected_modifiers=selected if self.custom_enabled else [],
             profile_eligible=not has_custom_modifiers and not self.custom_enabled,
             metadata={"seed_text": self.seed_text},
         )
@@ -74,8 +80,12 @@ class RunSetupScene(BaseScene):
         super().handle_event(event)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self.seed_active = self.seed_rect.collidepoint(event.pos)
+            profile = self.app.profile_system.profile
             for modifier_id, rect in self.modifier_rects.items():
                 if rect.collidepoint(event.pos):
+                    if not self.app.unlock_system.is_unlocked(profile, "run_modifier", modifier_id):
+                        self.error_message = "このRun Modifierは未解放です。"
+                        return
                     self.custom_enabled = True
                     if modifier_id in self.selected_modifiers:
                         self.selected_modifiers.remove(modifier_id)
@@ -109,21 +119,27 @@ class RunSetupScene(BaseScene):
         self.modifier_rects.clear()
         y = 378
         mouse = pygame.mouse.get_pos()
+        profile = self.app.profile_system.profile
         for modifier_id, item in self.app.registry.run_modifiers.items():
             data = item.data
+            unlocked = self.app.unlock_system.is_unlocked(profile, "run_modifier", modifier_id)
+            hidden = self.app.unlock_system.is_hidden_until_unlocked("run_modifier", modifier_id)
             rect = pygame.Rect(190, y, 900, 58)
             self.modifier_rects[modifier_id] = rect
-            selected = modifier_id in self.selected_modifiers
+            selected = modifier_id in self.selected_modifiers and unlocked
             hovered = rect.collidepoint(mouse)
             pygame.draw.rect(surface, colors.PANEL_LIGHT if hovered or selected else colors.PANEL, rect, border_radius=10)
             pygame.draw.rect(surface, colors.GOLD if selected else (95, 100, 125), rect, width=2, border_radius=10)
             checkbox = "[x]" if selected else "[ ]"
-            draw_text(surface, f"{checkbox} {data.get('name', modifier_id)}", get_font(20, bold=True), colors.GOLD if selected else colors.TEXT, (rect.x + 14, rect.y + 8))
-            draw_text(surface, data.get("description", ""), get_font(15), colors.MUTED, (rect.x + 270, rect.y + 12))
-            draw_text(surface, data.get("type", "utility"), get_font(14), colors.PURPLE, (rect.right - 100, rect.y + 34))
+            name = data.get("name", modifier_id) if unlocked or not hidden else "???"
+            desc = data.get("description", "") if unlocked else "未解放"
+            text_color = colors.GOLD if selected else (colors.TEXT if unlocked else colors.MUTED)
+            draw_text(surface, f"{checkbox} {name}", get_font(20, bold=True), text_color, (rect.x + 14, rect.y + 8))
+            draw_text(surface, desc, get_font(15), colors.MUTED, (rect.x + 270, rect.y + 12))
+            draw_text(surface, data.get("type", "utility"), get_font(14), colors.PURPLE if unlocked else colors.MUTED, (rect.right - 100, rect.y + 34))
             y += 68
 
         for button in self.buttons:
             button.draw(surface)
         if self.error_message:
-            draw_wrapped(surface, self.error_message, get_font(18), colors.RED if "対象外" in self.error_message else colors.TEXT, pygame.Rect(330, 575, 620, 40))
+            draw_wrapped(surface, self.error_message, get_font(18), colors.RED if "対象外" in self.error_message or "未解放" in self.error_message else colors.TEXT, pygame.Rect(330, 575, 620, 40))
