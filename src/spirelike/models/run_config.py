@@ -10,6 +10,7 @@ class RunConfig:
     seed: int | None = None
     custom: bool = False
     selected_modifiers: list[str] = field(default_factory=list)
+    difficulty_level: int = 0
     profile_eligible: bool = True
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -23,6 +24,7 @@ def run_config_to_dict(config: RunConfig | dict | None) -> dict[str, Any]:
         base["selected_modifiers"] = list(base.get("selected_modifiers", []) or [])
         base["metadata"] = dict(base.get("metadata", {}) or {})
         base["custom"] = bool(base.get("custom", False))
+        base["difficulty_level"] = int(base.get("difficulty_level", 0))
         base["profile_eligible"] = bool(base.get("profile_eligible", True))
         return base
     return {
@@ -30,6 +32,7 @@ def run_config_to_dict(config: RunConfig | dict | None) -> dict[str, Any]:
         "seed": config.seed,
         "custom": bool(config.custom),
         "selected_modifiers": list(config.selected_modifiers),
+        "difficulty_level": int(config.difficulty_level),
         "profile_eligible": bool(config.profile_eligible),
         "metadata": dict(config.metadata),
     }
@@ -42,6 +45,7 @@ def run_config_from_dict(data: dict | None) -> RunConfig:
         seed=data.get("seed"),
         custom=bool(data.get("custom", False)),
         selected_modifiers=list(data.get("selected_modifiers", []) or []),
+        difficulty_level=int(data.get("difficulty_level", 0)),
         profile_eligible=bool(data.get("profile_eligible", True)),
         metadata=dict(data.get("metadata", {}) or {}),
     )

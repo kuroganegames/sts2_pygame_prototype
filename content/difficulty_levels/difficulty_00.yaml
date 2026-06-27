@@ -1,0 +1,6 @@
+schema_version: 1
+id: difficulty_00
+level: 0
+name: 標準
+description: 通常のラン。
+effects: []

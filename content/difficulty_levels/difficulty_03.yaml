@@ -1,0 +1,8 @@
+schema_version: 1
+id: difficulty_03
+level: 3
+name: 試練 III
+description: プレイヤーの最大HPが5減る。
+effects:
+  - type: player_max_hp_delta
+    amount: -5
