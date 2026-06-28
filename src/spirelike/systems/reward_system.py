@@ -13,6 +13,7 @@ from spirelike.systems.card_reward_rarity_system import (
     RewardCardChoice,
     normalize_reward_card_choice,
 )
+from spirelike.systems.potion_drop_system import PotionDropSystem
 from spirelike.systems.potion_system import PotionSystem
 from spirelike.systems.unlock_system import UnlockSystem
 
@@ -26,6 +27,7 @@ class RewardBundle:
     potion_id: str | None = None
     message: str = ""
     base_applied: bool = False
+    potion_drop: dict[str, Any] = field(default_factory=dict)
 
 
 class RewardSystem:
@@ -34,31 +36,42 @@ class RewardSystem:
         self.potions = PotionSystem(registry)
         self.unlocks = UnlockSystem(registry)
         self.card_rewards = CardRewardRaritySystem(registry)
+        self.potion_drops = PotionDropSystem()
 
     def combat_reward(self, run_state: RunState, node_type: str, rng: random.Random) -> RewardBundle:
         if node_type == "elite":
             gold = rng.randint(25, 40)
             relic = self.random_relic(run_state, rng, allow_boss=False)
-            potion_chance = 0.35
             title = "エリート撃破報酬"
             source = "elite"
         elif node_type == "boss":
             gold = rng.randint(90, 120)
             relic = self.random_relic(run_state, rng, allow_boss=True)
-            potion_chance = 0.50
             title = "ボス撃破報酬"
             source = "boss"
         else:
             gold = rng.randint(10, 22)
             relic = None
-            potion_chance = 0.25
             title = "戦闘報酬"
             source = "monster"
         cards = self.card_choices(run_state, rng, choices=3, source=source, force_rare=(source == "boss"))
         potion = None
-        if self.potions.has_empty_slot(run_state) and rng.random() < potion_chance:
+        drop_result = self.potion_drops.roll_drop(
+            run_state,
+            rng,
+            node_type=node_type,
+            can_receive_potion=self.potions.has_empty_slot(run_state),
+        )
+        if drop_result.dropped:
             potion = self.potions.random_potion(rng, run_state=run_state)
-        return RewardBundle(title=title, gold=gold, card_choices=cards, relic_id=relic, potion_id=potion)
+        return RewardBundle(
+            title=title,
+            gold=gold,
+            card_choices=cards,
+            relic_id=relic,
+            potion_id=potion,
+            potion_drop=drop_result.to_dict(),
+        )
 
     def treasure_reward(self, run_state: RunState, rng: random.Random) -> RewardBundle:
         relic = self.random_relic(run_state, rng, allow_boss=False)
