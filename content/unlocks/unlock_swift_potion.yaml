@@ -1,0 +1,14 @@
+schema_version: 1
+id: unlock_swift_potion
+target_type: potion
+target_id: swift_potion
+initially_unlocked: false
+hidden_until_unlocked: false
+name: 迅速のポーション
+description: 火炎ポーションを使うと解放される。
+category: potion
+tier: 1
+order: 10
+conditions:
+  - type: potion_used
+    potion: fire_potion

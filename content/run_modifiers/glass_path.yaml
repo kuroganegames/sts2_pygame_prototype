@@ -1,0 +1,11 @@
+schema_version: 1
+id: glass_path
+name: 硝子の道
+type: challenge
+description: 敵HPが20%増えるが、開始時に集中の刃を1枚得る。
+profile_eligible: false
+effects:
+  - type: enemy_hp_multiplier
+    multiplier: 1.2
+  - type: add_card_to_deck
+    card: focus_blade

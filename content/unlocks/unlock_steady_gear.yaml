@@ -1,0 +1,14 @@
+schema_version: 1
+id: unlock_steady_gear
+target_type: relic
+target_id: steady_gear
+initially_unlocked: false
+hidden_until_unlocked: false
+name: 安定歯車
+description: ランを1回完了すると解放される。
+category: relic
+tier: 1
+order: 10
+conditions:
+  - type: runs_completed_at_least
+    amount: 1

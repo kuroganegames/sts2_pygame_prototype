@@ -1,0 +1,15 @@
+schema_version: 1
+id: unlock_glass_path
+target_type: run_modifier
+target_id: glass_path
+initially_unlocked: false
+hidden_until_unlocked: false
+name: 硝子の道
+description: WandererでDifficulty 1を勝利すると解放されるRun Modifier。
+category: run_modifier
+tier: 2
+order: 20
+conditions:
+  - type: character_difficulty_unlocked_at_least
+    character: wanderer
+    level: 2

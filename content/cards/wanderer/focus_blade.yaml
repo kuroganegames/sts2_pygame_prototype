@@ -1,0 +1,25 @@
+schema_version: 1
+id: focus_blade
+name: 集中の刃
+image: strike.png
+character: wanderer
+type: attack
+rarity: uncommon
+cost: 1
+target: enemy
+description: 8ダメージ。カードを1枚引く。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 8
+  - type: draw_cards
+    amount: 1
+upgrade:
+  name: 集中の刃+
+  description: 11ダメージ。カードを1枚引く。
+  effects:
+    - type: damage
+      target: selected_enemy
+      amount: 11
+    - type: draw_cards
+      amount: 1

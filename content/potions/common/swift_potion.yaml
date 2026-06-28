@@ -1,0 +1,11 @@
+schema_version: 1
+id: swift_potion
+name: 迅速のポーション
+image: fire_potion.png
+rarity: uncommon
+usage: combat
+target: none
+description: カードを2枚引く。
+effects:
+  - type: draw_cards
+    amount: 2

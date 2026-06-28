@@ -1,0 +1,23 @@
+schema_version: 1
+id: venom_tip
+name: 毒塗り
+image: strike.png
+character: wanderer
+type: skill
+rarity: rare
+cost: 1
+target: enemy
+description: 敵に毒4を与える。
+effects:
+  - type: apply_status
+    target: selected_enemy
+    status: poison
+    stacks: 4
+upgrade:
+  name: 毒塗り+
+  description: 敵に毒6を与える。
+  effects:
+    - type: apply_status
+      target: selected_enemy
+      status: poison
+      stacks: 6

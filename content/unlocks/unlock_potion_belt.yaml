@@ -6,4 +6,7 @@ initially_unlocked: true
 hidden_until_unlocked: false
 name: 薬帯Modifier
 description: 最初から使用可能。
+category: run_modifier
+tier: 0
+order: 10
 conditions: []
