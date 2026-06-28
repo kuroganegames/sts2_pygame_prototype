@@ -13,6 +13,10 @@ from spirelike.models.entities import (
     RelicInstance,
     RunState,
 )
+from spirelike.systems.card_reward_rarity_system import (
+    reward_choice_from_dict,
+    reward_choice_to_dict,
+)
 from spirelike.systems.reward_system import RewardBundle
 
 
@@ -235,7 +239,7 @@ def reward_bundle_to_dict(reward: RewardBundle | None) -> dict[str, Any] | None:
     return {
         "title": reward.title,
         "gold": reward.gold,
-        "card_choices": list(reward.card_choices),
+        "card_choices": [reward_choice_to_dict(choice) for choice in reward.card_choices],
         "relic_id": reward.relic_id,
         "potion_id": reward.potion_id,
         "message": reward.message,
@@ -249,7 +253,7 @@ def reward_bundle_from_dict(data: dict[str, Any] | None) -> RewardBundle | None:
     return RewardBundle(
         title=str(data.get("title", "報酬")),
         gold=int(data.get("gold", 0)),
-        card_choices=list(data.get("card_choices", []) or []),
+        card_choices=[reward_choice_from_dict(choice) for choice in data.get("card_choices", []) or []],
         relic_id=data.get("relic_id"),
         potion_id=data.get("potion_id"),
         message=str(data.get("message", "")),
