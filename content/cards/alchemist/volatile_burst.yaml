@@ -1,0 +1,31 @@
+schema_version: 1
+id: volatile_burst
+name: 揮発爆発
+image: ../wanderer/strike.png
+character: alchemist
+type: attack
+rarity: rare
+cost: 1
+target: enemy
+keywords:
+  - exhaust
+description: 10ダメージ。自分に弱体1。廃棄。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 10
+  - type: apply_status
+    target: self
+    status: weak
+    stacks: 1
+upgrade:
+  name: 揮発爆発+
+  description: 14ダメージ。自分に弱体1。廃棄。
+  effects:
+    - type: damage
+      target: selected_enemy
+      amount: 14
+    - type: apply_status
+      target: self
+      status: weak
+      stacks: 1

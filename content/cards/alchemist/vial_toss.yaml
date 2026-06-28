@@ -1,0 +1,29 @@
+schema_version: 1
+id: vial_toss
+name: 小瓶投げ
+image: ../wanderer/strike.png
+character: alchemist
+type: attack
+rarity: basic
+cost: 1
+target: enemy
+description: 4ダメージ。毒2を与える。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 4
+  - type: apply_status
+    target: selected_enemy
+    status: poison
+    stacks: 2
+upgrade:
+  name: 小瓶投げ+
+  description: 6ダメージ。毒3を与える。
+  effects:
+    - type: damage
+      target: selected_enemy
+      amount: 6
+    - type: apply_status
+      target: selected_enemy
+      status: poison
+      stacks: 3

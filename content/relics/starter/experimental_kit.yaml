@@ -1,0 +1,13 @@
+schema_version: 1
+id: experimental_kit
+name: 実験キット
+image: old_charm.png
+rarity: starter
+unique: true
+description: 戦闘開始時、試薬を1枚手札に加える。
+triggers:
+  - event: combat_start
+    effects:
+      - type: add_card_to_hand
+        card: reagent
+        amount: 1

@@ -1,0 +1,25 @@
+schema_version: 1
+id: reagent
+name: 試薬
+image: ../wanderer/strike.png
+character: alchemist
+type: skill
+rarity: basic
+cost: 0
+target: enemy
+keywords:
+  - exhaust
+description: 敵に毒2を与える。廃棄。
+effects:
+  - type: apply_status
+    target: selected_enemy
+    status: poison
+    stacks: 2
+upgrade:
+  name: 試薬+
+  description: 敵に毒3を与える。廃棄。
+  effects:
+    - type: apply_status
+      target: selected_enemy
+      status: poison
+      stacks: 3

@@ -87,73 +87,84 @@ class ProfileSystem:
         eligible = self.run_profile_eligible(run_state)
         if eligible:
             self.apply_metrics_to_profile(run_state, result, metrics)
-
-            progression.new_difficulty_unlocks = self.update_difficulty_progression(run_state, result)
-            for item in progression.new_difficulty_unlocks:
-                self._notify(
-                    progression,
-                    notification_id=f"difficulty:{item.get('character_id')}:{item.get('difficulty_level')}",
-                    notification_type="difficulty_unlocked",
-                    title=item.get("title", "Difficulty解放"),
-                    message=item.get("message", ""),
-                    payload=item,
-                )
-
-            new_fragment_ids = self.update_timeline_unlocks()
-            for fragment_id in new_fragment_ids:
-                fragment = self.registry.timeline_fragment(fragment_id)
-                item = {
-                    "fragment_id": fragment_id,
-                    "title": fragment.get("title", fragment_id),
-                    "description": fragment.get("description", ""),
-                }
-                progression.new_timeline_fragments.append(item)
-                run_state.add_message(f"Timeline解放: {item['title']}")
-                self._notify(
-                    progression,
-                    notification_id=f"timeline:{fragment_id}",
-                    notification_type="timeline_unlocked",
-                    title=f"Timeline解放: {item['title']}",
-                    message=item["description"],
-                    payload=item,
-                )
-
-            new_unlocks = self.unlock_system.evaluate_unlocks(self.profile)
-            progression.new_content_unlocks = list(new_unlocks)
-            for rule in new_unlocks:
-                name = rule.get("name") or f"{rule.get('target_type')}:{rule.get('target_id')}"
-                run_state.add_message(f"Unlock: {name}")
-                self._notify(
-                    progression,
-                    notification_id=f"unlock:{rule.get('target_type')}:{rule.get('target_id')}",
-                    notification_type="content_unlocked",
-                    title=f"解放: {name}",
-                    message=rule.get("description", ""),
-                    payload={
-                        "rule_id": rule.get("id"),
-                        "target_type": rule.get("target_type"),
-                        "target_id": rule.get("target_id"),
-                    },
-                )
-
-            new_achievements = self.achievement_system.evaluate_achievements(
-                self.profile,
-                profile_eligible=eligible,
-            )
-            progression.new_achievements = list(new_achievements)
-            for achievement in new_achievements:
-                name = achievement.get("name", achievement.get("id"))
-                run_state.add_message(f"実績解除: {name}")
-                self._notify(
-                    progression,
-                    notification_id=f"achievement:{achievement.get('id')}",
-                    notification_type="achievement_unlocked",
-                    title=f"実績解除: {name}",
-                    message=achievement.get("description", ""),
-                    payload={"achievement_id": achievement.get("id")},
-                )
+            self._record_difficulty_unlocks(progression, run_state, result)
+            self._record_timeline_unlocks(progression, run_state)
+            # PR13: achievement_unlocked 条件のUnlockを同じラン終了時に開けるため、
+            # Achievement → Unlock → Achievement の順に評価する。
+            self._record_achievement_unlocks(progression, run_state, eligible)
+            self._record_content_unlocks(progression, run_state)
+            self._record_achievement_unlocks(progression, run_state, eligible)
         self.save()
         return progression
+
+    def _record_difficulty_unlocks(self, progression: ProgressionResult, run_state: RunState, result: str) -> None:
+        progression.new_difficulty_unlocks = self.update_difficulty_progression(run_state, result)
+        for item in progression.new_difficulty_unlocks:
+            self._notify(
+                progression,
+                notification_id=f"difficulty:{item.get('character_id')}:{item.get('difficulty_level')}",
+                notification_type="difficulty_unlocked",
+                title=item.get("title", "Difficulty解放"),
+                message=item.get("message", ""),
+                payload=item,
+            )
+
+    def _record_timeline_unlocks(self, progression: ProgressionResult, run_state: RunState) -> None:
+        new_fragment_ids = self.update_timeline_unlocks()
+        for fragment_id in new_fragment_ids:
+            fragment = self.registry.timeline_fragment(fragment_id)
+            item = {
+                "fragment_id": fragment_id,
+                "title": fragment.get("title", fragment_id),
+                "description": fragment.get("description", ""),
+            }
+            progression.new_timeline_fragments.append(item)
+            run_state.add_message(f"Timeline解放: {item['title']}")
+            self._notify(
+                progression,
+                notification_id=f"timeline:{fragment_id}",
+                notification_type="timeline_unlocked",
+                title=f"Timeline解放: {item['title']}",
+                message=item["description"],
+                payload=item,
+            )
+
+    def _record_content_unlocks(self, progression: ProgressionResult, run_state: RunState) -> None:
+        new_unlocks = self.unlock_system.evaluate_unlocks(self.profile)
+        progression.new_content_unlocks.extend(new_unlocks)
+        for rule in new_unlocks:
+            name = rule.get("name") or f"{rule.get('target_type')}:{rule.get('target_id')}"
+            run_state.add_message(f"Unlock: {name}")
+            self._notify(
+                progression,
+                notification_id=f"unlock:{rule.get('target_type')}:{rule.get('target_id')}",
+                notification_type="content_unlocked",
+                title=f"解放: {name}",
+                message=rule.get("description", ""),
+                payload={
+                    "rule_id": rule.get("id"),
+                    "target_type": rule.get("target_type"),
+                    "target_id": rule.get("target_id"),
+                },
+            )
+
+    def _record_achievement_unlocks(self, progression: ProgressionResult, run_state: RunState, eligible: bool) -> None:
+        new_achievements = self.achievement_system.evaluate_achievements(
+            self.profile,
+            profile_eligible=eligible,
+        )
+        progression.new_achievements.extend(new_achievements)
+        for achievement in new_achievements:
+            name = achievement.get("name", achievement.get("id"))
+            run_state.add_message(f"実績解除: {name}")
+            self._notify(
+                progression,
+                notification_id=f"achievement:{achievement.get('id')}",
+                notification_type="achievement_unlocked",
+                title=f"実績解除: {name}",
+                message=achievement.get("description", ""),
+                payload={"achievement_id": achievement.get("id")},
+            )
 
     def _notify(
         self,

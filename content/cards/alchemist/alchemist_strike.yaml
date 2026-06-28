@@ -1,0 +1,21 @@
+schema_version: 1
+id: alchemist_strike
+name: ストライク
+image: ../wanderer/strike.png
+character: alchemist
+type: attack
+rarity: basic
+cost: 1
+target: enemy
+description: 5ダメージを与える。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 5
+upgrade:
+  name: ストライク+
+  description: 8ダメージを与える。
+  effects:
+    - type: damage
+      target: selected_enemy
+      amount: 8

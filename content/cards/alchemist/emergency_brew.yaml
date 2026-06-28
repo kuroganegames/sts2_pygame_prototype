@@ -1,0 +1,21 @@
+schema_version: 1
+id: emergency_brew
+name: 緊急調合
+image: ../wanderer/strike.png
+character: alchemist
+type: skill
+rarity: uncommon
+cost: 0
+target: none
+keywords:
+  - exhaust
+description: ランダムなポーションを得る。廃棄。
+effects:
+  - type: gain_random_potion
+upgrade:
+  name: 緊急調合+
+  description: ランダムなポーションを得る。カードを1枚引く。廃棄。
+  effects:
+    - type: gain_random_potion
+    - type: draw_cards
+      amount: 1

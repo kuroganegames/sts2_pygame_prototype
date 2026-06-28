@@ -1,0 +1,21 @@
+schema_version: 1
+id: alchemist_guard
+name: ガード
+image: ../wanderer/strike.png
+character: alchemist
+type: skill
+rarity: basic
+cost: 1
+target: none
+description: 5ブロックを得る。
+effects:
+  - type: gain_block
+    target: self
+    amount: 5
+upgrade:
+  name: ガード+
+  description: 8ブロックを得る。
+  effects:
+    - type: gain_block
+      target: self
+      amount: 8

@@ -1,0 +1,25 @@
+schema_version: 1
+id: perfect_formula
+name: 完全式
+image: ../wanderer/strike.png
+character: alchemist
+type: skill
+rarity: rare
+cost: 2
+target: none
+keywords:
+  - exhaust
+description: カードを3枚引く。エナジー1を得る。廃棄。
+effects:
+  - type: draw_cards
+    amount: 3
+  - type: gain_energy
+    amount: 1
+upgrade:
+  name: 完全式+
+  description: カードを4枚引く。エナジー1を得る。廃棄。
+  effects:
+    - type: draw_cards
+      amount: 4
+    - type: gain_energy
+      amount: 1

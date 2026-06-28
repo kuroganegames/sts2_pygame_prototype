@@ -38,6 +38,11 @@ python main.py
   - 追加レリック
   - 追加ポーション
   - 追加Run Modifier
+- Character Pack 01: 錬金術師
+  - 新プレイアブルキャラクター
+  - 専用スターターデッキ
+  - 専用スターターレリック
+  - 毒 / 試薬 / ポーション生成寄りの専用カード
 - ラン開始時のエンシェント祝福選択
 - YAMLからコンテンツ読み込み
 - YAMLからマップランダム生成
@@ -140,6 +145,15 @@ effects:
         - master_deck
       count: 1
       player_choice: true
+```
+
+ポーション生成系の効果も使用できます。
+
+```yaml
+effects:
+  - type: gain_random_potion
+  - type: gain_potion
+    potion: fire_potion
 ```
 
 ## 注意

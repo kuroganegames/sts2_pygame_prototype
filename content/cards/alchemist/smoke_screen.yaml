@@ -1,0 +1,29 @@
+schema_version: 1
+id: smoke_screen
+name: 煙幕
+image: ../wanderer/strike.png
+character: alchemist
+type: skill
+rarity: common
+cost: 1
+target: enemy
+description: 6ブロック。敵に弱体1を与える。
+effects:
+  - type: gain_block
+    target: self
+    amount: 6
+  - type: apply_status
+    target: selected_enemy
+    status: weak
+    stacks: 1
+upgrade:
+  name: 煙幕+
+  description: 8ブロック。敵に弱体1を与える。
+  effects:
+    - type: gain_block
+      target: self
+      amount: 8
+    - type: apply_status
+      target: selected_enemy
+      status: weak
+      stacks: 1

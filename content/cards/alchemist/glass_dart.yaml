@@ -1,0 +1,31 @@
+schema_version: 1
+id: glass_dart
+name: 硝子の矢
+image: ../wanderer/strike.png
+character: alchemist
+type: attack
+rarity: common
+cost: 0
+target: enemy
+keywords:
+  - exhaust
+description: 3ダメージ。毒1を与える。廃棄。
+effects:
+  - type: damage
+    target: selected_enemy
+    amount: 3
+  - type: apply_status
+    target: selected_enemy
+    status: poison
+    stacks: 1
+upgrade:
+  name: 硝子の矢+
+  description: 5ダメージ。毒1を与える。廃棄。
+  effects:
+    - type: damage
+      target: selected_enemy
+      amount: 5
+    - type: apply_status
+      target: selected_enemy
+      status: poison
+      stacks: 1

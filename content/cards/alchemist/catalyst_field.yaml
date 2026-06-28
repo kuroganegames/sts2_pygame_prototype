@@ -1,0 +1,31 @@
+schema_version: 1
+id: catalyst_field
+name: 触媒領域
+image: ../wanderer/strike.png
+character: alchemist
+type: skill
+rarity: uncommon
+cost: 2
+target: none
+description: 敵全体に毒4と脱力1を与える。
+effects:
+  - type: apply_status
+    target: all_enemies
+    status: poison
+    stacks: 4
+  - type: apply_status
+    target: all_enemies
+    status: vulnerable
+    stacks: 1
+upgrade:
+  name: 触媒領域+
+  description: 敵全体に毒5と脱力1を与える。
+  effects:
+    - type: apply_status
+      target: all_enemies
+      status: poison
+      stacks: 5
+    - type: apply_status
+      target: all_enemies
+      status: vulnerable
+      stacks: 1

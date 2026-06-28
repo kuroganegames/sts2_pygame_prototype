@@ -1,0 +1,19 @@
+schema_version: 1
+id: distill
+name: 蒸留
+image: ../wanderer/strike.png
+character: alchemist
+type: skill
+rarity: common
+cost: 1
+target: none
+description: カードを2枚引く。
+effects:
+  - type: draw_cards
+    amount: 2
+upgrade:
+  name: 蒸留+
+  description: カードを3枚引く。
+  effects:
+    - type: draw_cards
+      amount: 3
