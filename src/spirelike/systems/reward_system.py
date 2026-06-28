@@ -2,10 +2,17 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
+from typing import Any
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import CardInstance, RelicInstance, RunState
 from spirelike.profile.run_metrics import RunMetricsSystem
+from spirelike.systems.card_reward_rarity_system import (
+    CardRewardContext,
+    CardRewardRaritySystem,
+    RewardCardChoice,
+    normalize_reward_card_choice,
+)
 from spirelike.systems.potion_system import PotionSystem
 from spirelike.systems.unlock_system import UnlockSystem
 
@@ -14,7 +21,7 @@ from spirelike.systems.unlock_system import UnlockSystem
 class RewardBundle:
     title: str = "報酬"
     gold: int = 0
-    card_choices: list[str] = field(default_factory=list)
+    card_choices: list[RewardCardChoice | dict[str, Any] | str] = field(default_factory=list)
     relic_id: str | None = None
     potion_id: str | None = None
     message: str = ""
@@ -26,6 +33,7 @@ class RewardSystem:
         self.registry = registry
         self.potions = PotionSystem(registry)
         self.unlocks = UnlockSystem(registry)
+        self.card_rewards = CardRewardRaritySystem(registry)
 
     def combat_reward(self, run_state: RunState, node_type: str, rng: random.Random) -> RewardBundle:
         if node_type == "elite":
@@ -33,17 +41,20 @@ class RewardSystem:
             relic = self.random_relic(run_state, rng, allow_boss=False)
             potion_chance = 0.35
             title = "エリート撃破報酬"
+            source = "elite"
         elif node_type == "boss":
             gold = rng.randint(90, 120)
             relic = self.random_relic(run_state, rng, allow_boss=True)
             potion_chance = 0.50
             title = "ボス撃破報酬"
+            source = "boss"
         else:
             gold = rng.randint(10, 22)
             relic = None
             potion_chance = 0.25
             title = "戦闘報酬"
-        cards = self.card_choices(run_state, rng, choices=3, force_rare=(node_type == "boss"))
+            source = "monster"
+        cards = self.card_choices(run_state, rng, choices=3, source=source, force_rare=(source == "boss"))
         potion = None
         if self.potions.has_empty_slot(run_state) and rng.random() < potion_chance:
             potion = self.potions.random_potion(rng, run_state=run_state)
@@ -62,35 +73,20 @@ class RewardSystem:
         *,
         choices: int,
         force_rare: bool = False,
-    ) -> list[str]:
-        character_id = run_state.character_id
-        pool = []
-        for card_id, item in self.registry.cards.items():
-            card = item.data
-            rarity = card.get("rarity", "common")
-            card_type = card.get("type")
-            if rarity == "basic" or card_type in {"status", "curse"}:
-                continue
-            if not self.unlocks.run_has_unlocked(run_state, "cards", card_id):
-                continue
-            if card.get("character") not in {character_id, "neutral"}:
-                continue
-            if force_rare and rarity != "rare":
-                continue
-            weight = {"common": 65, "uncommon": 30, "rare": 5}.get(rarity, 10)
-            if force_rare:
-                weight = 1
-            pool.append((card_id, weight))
-        if not pool:
-            return []
-        selected: list[str] = []
-        attempts = 0
-        while len(selected) < choices and attempts < 100:
-            attempts += 1
-            card_id = self._weighted_choice(pool, rng)
-            if card_id not in selected:
-                selected.append(card_id)
-        return selected
+        source: str = "monster",
+    ) -> list[RewardCardChoice]:
+        return self.card_rewards.card_choices(
+            run_state,
+            rng,
+            CardRewardContext(
+                source=source,
+                choices=choices,
+                force_rare=force_rare,
+                update_rare_bonus=(source != "shop"),
+                reset_on_rare=(source != "shop"),
+                allow_upgrades=(source != "shop"),
+            ),
+        )
 
     def random_relic(self, run_state: RunState, rng: random.Random, *, allow_boss: bool) -> str | None:
         owned = {relic.relic_id for relic in run_state.player.relics}
@@ -137,7 +133,9 @@ class RewardSystem:
             self.potions.grant_potion(run_state, reward.potion_id)
         reward.base_applied = True
 
-    def choose_card(self, run_state: RunState, card_id: str) -> None:
-        run_state.player.deck.append(CardInstance(card_id=card_id))
-        RunMetricsSystem.record_card_acquired(run_state, card_id)
-        run_state.add_message(f"カード追加: {self.registry.card(card_id).get('name', card_id)}")
+    def choose_card(self, run_state: RunState, choice: RewardCardChoice | dict[str, Any] | str) -> None:
+        normalized = normalize_reward_card_choice(choice)
+        run_state.player.deck.append(CardInstance(card_id=normalized.card_id, upgraded=normalized.upgraded))
+        RunMetricsSystem.record_card_acquired(run_state, normalized.card_id)
+        name = self.registry.card_display_name(normalized.card_id, normalized.upgraded)
+        run_state.add_message(f"カード追加: {name}")
