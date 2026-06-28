@@ -1,0 +1,12 @@
+schema_version: 1
+id: first_unlock
+name: 新たな可能性
+category: unlock
+description: 初めて追加コンテンツを解放する。
+locked_description: 何かを解放する。
+hidden_until_unlocked: false
+profile_eligible_required: true
+conditions:
+  - type: unlocked_count_at_least
+    target_type: run_modifier
+    amount: 2

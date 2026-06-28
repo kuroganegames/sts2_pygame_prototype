@@ -1,0 +1,11 @@
+schema_version: 1
+id: difficulty_1_victory
+name: 試練の始まり
+category: difficulty
+description: いずれかのキャラクターでDifficulty 1以上を勝利する。
+locked_description: Difficulty 1以上で勝利する。
+hidden_until_unlocked: false
+profile_eligible_required: true
+conditions:
+  - type: any_character_difficulty_unlocked_at_least
+    level: 2

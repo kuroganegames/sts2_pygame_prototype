@@ -1,0 +1,11 @@
+schema_version: 1
+id: first_victory
+name: 最初の踏破
+category: run
+description: 通常ランで初めて勝利する。
+locked_description: まだ達成していない実績。
+hidden_until_unlocked: false
+profile_eligible_required: true
+conditions:
+  - type: victories_at_least
+    amount: 1

@@ -31,6 +31,7 @@ class ContentRegistry:
     run_modifiers: Dict[str, ContentItem] = field(default_factory=dict)
     difficulty_levels: Dict[str, ContentItem] = field(default_factory=dict)
     unlock_rules: Dict[str, ContentItem] = field(default_factory=dict)
+    achievements: Dict[str, ContentItem] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
     def card(self, card_id: str) -> dict[str, Any]:
@@ -74,6 +75,9 @@ class ContentRegistry:
 
     def unlock_rule(self, unlock_id: str) -> dict[str, Any]:
         return self.unlock_rules[unlock_id].data
+
+    def achievement(self, achievement_id: str) -> dict[str, Any]:
+        return self.achievements[achievement_id].data
 
     def image_for(self, kind: str, item_id: str) -> Optional[Path]:
         table = getattr(self, kind)
@@ -153,6 +157,10 @@ class ContentLoader:
         "modifier_applied_count_at_least",
         "ancient_choice",
         "timeline_unlocked",
+        "achievement_unlocked",
+        "unlocked_count_at_least",
+        "timeline_count_at_least",
+        "compendium_seen_count_at_least",
     }
     TIMELINE_CONDITION_TYPES = CONDITION_TYPES
 
@@ -175,6 +183,7 @@ class ContentLoader:
         self._load_collection("run_modifiers", self.registry.run_modifiers, require_image=False, recursive=True)
         self._load_collection("difficulty_levels", self.registry.difficulty_levels, require_image=False, recursive=True)
         self._load_collection("unlocks", self.registry.unlock_rules, require_image=False, recursive=True)
+        self._load_collection("achievements", self.registry.achievements, require_image=False, recursive=True)
         self._validate_references()
         return self.registry
 
@@ -281,6 +290,7 @@ class ContentLoader:
 
         self._validate_difficulty_levels()
         self._validate_unlock_rules()
+        self._validate_achievements()
 
     def _validate_card_modifier(self, modifier_id: str, data: dict[str, Any]) -> None:
         modifier_type = data.get("type")
@@ -359,6 +369,15 @@ class ContentLoader:
                 self.registry.warnings.append(f"Unlock {unlock_id} references missing target: {target_type}.{target_id}")
             self._validate_conditions(data.get("conditions", []) or [], f"unlock {unlock_id}")
 
+    def _validate_achievements(self) -> None:
+        for achievement_id, item in self.registry.achievements.items():
+            data = item.data
+            if not data.get("name"):
+                self.registry.warnings.append(f"Achievement {achievement_id} has no name")
+            if not isinstance(data.get("category", "general"), str):
+                self.registry.warnings.append(f"Achievement {achievement_id} category must be a string")
+            self._validate_conditions(data.get("conditions", []) or [], f"achievement {achievement_id}")
+
     def _target_exists(self, target_type: str, target_id: str) -> bool:
         tables = {
             "character": self.registry.characters,
@@ -401,6 +420,10 @@ class ContentLoader:
                 self.registry.warnings.append(f"{where} references missing timeline fragment: {condition['fragment']}")
             if condition.get("character") and condition["character"] not in self.registry.characters:
                 self.registry.warnings.append(f"{where} references missing character: {condition['character']}")
+            if condition.get("achievement") and condition["achievement"] not in self.registry.achievements:
+                self.registry.warnings.append(f"{where} references missing achievement: {condition['achievement']}")
+            if condition.get("target_type") and condition["target_type"] not in self.UNLOCK_TARGET_TYPES:
+                self.registry.warnings.append(f"{where} references invalid target_type: {condition['target_type']}")
 
     def _validate_effects(self, effects: Iterable[dict[str, Any]], where: str) -> None:
         for effect in effects or []:

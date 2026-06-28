@@ -6,6 +6,7 @@ from spirelike.profile.profile_data import (
     default_compendium,
     default_summary,
     default_unlocks,
+    default_achievements,
 )
 
 
@@ -23,6 +24,8 @@ def profile_to_dict(profile: ProfileState) -> dict:
         "compendium": dict(profile.compendium),
         "timeline": dict(profile.timeline),
         "unlocks": dict(profile.unlocks),
+        "achievements": dict(profile.achievements),
+        "notifications": list(profile.notifications),
     }
 
 
@@ -39,6 +42,8 @@ def profile_from_dict(data: dict) -> ProfileState:
         compendium=dict(data.get("compendium", {}) or default_compendium()),
         timeline=dict(data.get("timeline", {}) or {"unlocked_fragments": []}),
         unlocks=dict(data.get("unlocks", {}) or default_unlocks()),
+        achievements=dict(data.get("achievements", {}) or default_achievements()),
+        notifications=list(data.get("notifications", []) or []),
     )
     profile.ensure_defaults()
     return profile

@@ -3,6 +3,17 @@ from __future__ import annotations
 from spirelike.profile.profile_data import ProfileState
 
 
+TARGET_TO_TABLE = {
+    "character": "characters",
+    "card": "cards",
+    "relic": "relics",
+    "potion": "potions",
+    "run_modifier": "run_modifiers",
+    "ancient": "ancients",
+    "card_modifier": "card_modifiers",
+}
+
+
 SUPPORTED_CONDITION_TYPES = {
     "runs_started_at_least",
     "runs_completed_at_least",
@@ -24,6 +35,10 @@ SUPPORTED_CONDITION_TYPES = {
     "modifier_applied_count_at_least",
     "ancient_choice",
     "timeline_unlocked",
+    "achievement_unlocked",
+    "unlocked_count_at_least",
+    "timeline_count_at_least",
+    "compendium_seen_count_at_least",
 }
 
 
@@ -100,5 +115,25 @@ def condition_met(profile: ProfileState, condition: dict) -> bool:
     if condition_type == "timeline_unlocked":
         fragment_id = condition.get("fragment")
         return fragment_id in set(profile.timeline.get("unlocked_fragments", []) or [])
+
+    if condition_type == "achievement_unlocked":
+        achievement_id = condition.get("achievement")
+        return bool(profile.achievements.get(achievement_id, {}).get("unlocked"))
+
+    if condition_type == "unlocked_count_at_least":
+        target_type = condition.get("target_type")
+        table_name = TARGET_TO_TABLE.get(str(target_type), f"{target_type}s")
+        table = profile.unlocks.get(table_name, {}) or {}
+        count = sum(1 for entry in table.values() if isinstance(entry, dict) and entry.get("unlocked"))
+        return count >= int(condition.get("amount", 1))
+
+    if condition_type == "timeline_count_at_least":
+        return len(profile.timeline.get("unlocked_fragments", []) or []) >= int(condition.get("amount", 1))
+
+    if condition_type == "compendium_seen_count_at_least":
+        category = condition.get("category", "cards")
+        amount = int(condition.get("amount", 1))
+        entries = profile.compendium.get(category, {}) or {}
+        return sum(1 for entry in entries.values() if isinstance(entry, dict) and entry.get("seen")) >= amount
 
     return False
