@@ -5,8 +5,8 @@ from dataclasses import dataclass
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import RunState
+from spirelike.systems.card_reward_rarity_system import CardRewardContext, CardRewardRaritySystem, reward_choice_card_id
 from spirelike.systems.potion_system import PotionSystem
-from spirelike.systems.reward_system import RewardSystem
 from spirelike.systems.unlock_system import UnlockSystem
 
 
@@ -27,14 +27,25 @@ class PotionOffer:
 class ShopSystem:
     def __init__(self, registry: ContentRegistry) -> None:
         self.registry = registry
-        self.rewards = RewardSystem(registry)
+        self.card_rewards = CardRewardRaritySystem(registry)
         self.potions = PotionSystem(registry)
         self.unlocks = UnlockSystem(registry)
 
     def generate_card_offers(self, run_state: RunState, rng: random.Random, count: int = 5) -> list[ShopOffer]:
-        card_ids = self.rewards.card_choices(run_state, rng, choices=count)
+        choices = self.card_rewards.card_choices(
+            run_state,
+            rng,
+            CardRewardContext(
+                source="shop",
+                choices=count,
+                update_rare_bonus=False,
+                reset_on_rare=False,
+                allow_upgrades=False,
+            ),
+        )
         offers = []
-        for card_id in card_ids:
+        for choice in choices:
+            card_id = reward_choice_card_id(choice)
             rarity = self.registry.card(card_id).get("rarity", "common")
             lo, hi = {
                 "common": (45, 60),
