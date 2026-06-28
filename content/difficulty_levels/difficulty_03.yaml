@@ -1,8 +1,11 @@
 schema_version: 1
 id: difficulty_03
 level: 3
-name: 試練 III
-description: プレイヤーの最大HPが5減る。
+name: 貧困
+description: 敵と宝箱から得られるゴールドが25%減少する。
 effects:
-  - type: player_max_hp_delta
-    amount: -5
+  - type: gold_reward_multiplier
+    source:
+      - combat
+      - treasure
+    multiplier: 0.75

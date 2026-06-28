@@ -1,8 +1,10 @@
 schema_version: 1
 id: difficulty_02
 level: 2
-name: 試練 II
-description: 敵の与ダメージが10%増える。
+name: 疲れ果てた旅人
+description: 初期HPが最大HPの80%になり、エンシェント回復量が減少HPの80%になる。
 effects:
-  - type: enemy_damage_multiplier
-    multiplier: 1.10
+  - type: starting_hp_multiplier
+    multiplier: 0.80
+  - type: ancient_heal_missing_hp_multiplier
+    multiplier: 0.80

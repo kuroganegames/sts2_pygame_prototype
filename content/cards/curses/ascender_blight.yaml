@@ -1,0 +1,13 @@
+schema_version: 1
+id: ascender_blight
+name: 昇塔者の災厄
+image: ../wanderer/strike.png
+character: neutral
+type: curse
+rarity: special
+cost: unplayable
+target: none
+keywords:
+  - unplayable
+description: 使用できない。高難度によって初期デッキに加わる呪い。
+effects: []

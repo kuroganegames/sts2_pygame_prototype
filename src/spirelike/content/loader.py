@@ -123,9 +123,18 @@ class ContentLoader:
         "map_weight_multiplier",
     }
     DIFFICULTY_EFFECT_TYPES = {
+        "map_weight_multiplier",
+        "starting_hp_multiplier",
+        "ancient_heal_missing_hp_multiplier",
+        "gold_reward_multiplier",
+        "potion_slot_delta",
+        "add_card_to_deck",
+        "card_remove_cost",
+        "card_reward_depletion",
         "enemy_hp_multiplier",
         "enemy_damage_multiplier",
         "player_max_hp_delta",
+        "double_boss",
     }
     UNLOCK_TARGET_TYPES = {
         "character",
@@ -344,8 +353,17 @@ class ContentLoader:
                 self.registry.warnings.append(f"Difficulty {difficulty_id} effects must be a list")
                 continue
             for effect in effects:
-                if effect.get("type") not in self.DIFFICULTY_EFFECT_TYPES:
-                    self.registry.warnings.append(f"Difficulty {difficulty_id} has invalid effect: {effect.get('type')}")
+                effect_type = effect.get("type")
+                if effect_type not in self.DIFFICULTY_EFFECT_TYPES:
+                    self.registry.warnings.append(f"Difficulty {difficulty_id} has invalid effect: {effect_type}")
+                if effect_type == "add_card_to_deck" and effect.get("card") not in self.registry.cards:
+                    self.registry.warnings.append(f"Difficulty {difficulty_id} references missing card: {effect.get('card')}")
+                for numeric_key in ("multiplier", "amount", "base", "step"):
+                    if numeric_key in effect:
+                        try:
+                            float(effect.get(numeric_key))
+                        except (TypeError, ValueError):
+                            self.registry.warnings.append(f"Difficulty {difficulty_id} has invalid {numeric_key}: {effect.get(numeric_key)}")
         if self.registry.difficulty_levels and 0 not in seen_levels:
             self.registry.warnings.append("Difficulty level 0 is missing")
 

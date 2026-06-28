@@ -5,13 +5,15 @@ from typing import Any
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import MapNode, MapState
+from spirelike.systems.difficulty_system import DifficultySystem
 
 
 class MapGenerator:
     def __init__(self, registry: ContentRegistry) -> None:
         self.registry = registry
+        self.difficulty = DifficultySystem(registry)
 
-    def generate(self, act_id: str, rng: random.Random) -> MapState:
+    def generate(self, act_id: str, rng: random.Random, run_config: dict[str, Any] | None = None) -> MapState:
         act_def = self.registry.map(act_id)
         layers = int(act_def.get("layers", 15))
         layout = act_def.get("layout", {}) or {}
@@ -32,7 +34,7 @@ class MapGenerator:
 
             current_layer: list[MapNode] = []
             for i in range(count):
-                node_type = self._choose_node_type(act_def, layer, rng)
+                node_type = self._choose_node_type(act_def, layer, rng, run_config=run_config)
                 node_id = f"L{layer:02d}N{i:02d}"
                 x = (i + 1) / (count + 1)
                 y = (layer - 1) / max(1, layers - 1)
@@ -53,18 +55,36 @@ class MapGenerator:
             nodes[node_id].available = True
         return MapState(act_id=act_id, nodes=nodes, layers=layers, start_node_ids=start_node_ids)
 
-    def _choose_node_type(self, act_def: dict[str, Any], layer: int, rng: random.Random) -> str:
+    def _choose_node_type(
+        self,
+        act_def: dict[str, Any],
+        layer: int,
+        rng: random.Random,
+        run_config: dict[str, Any] | None = None,
+    ) -> str:
         fixed = act_def.get("fixed_layers", {}) or {}
         fixed_layer = fixed.get(layer) or fixed.get(str(layer))
         if fixed_layer:
             allowed = fixed_layer.get("allowed") or {}
             if allowed:
-                return self._weighted_choice(allowed, rng)
+                return self._weighted_choice(self._apply_difficulty_weights(allowed, run_config), rng)
 
         for depth_def in (act_def.get("weights_by_depth", {}) or {}).values():
             if layer in depth_def.get("layers", []):
-                return self._weighted_choice(depth_def.get("weights", {}), rng)
+                weights = depth_def.get("weights", {})
+                return self._weighted_choice(self._apply_difficulty_weights(weights, run_config), rng)
         return "monster"
+
+    def _apply_difficulty_weights(
+        self,
+        weights: dict[str, int | float],
+        run_config: dict[str, Any] | None,
+    ) -> dict[str, float]:
+        adjusted: dict[str, float] = {}
+        for node_type, weight in weights.items():
+            multiplier = self.difficulty.map_weight_multiplier_for_config(run_config, str(node_type))
+            adjusted[str(node_type)] = float(weight) * multiplier
+        return adjusted
 
     def _weighted_choice(self, weights: dict[str, int | float], rng: random.Random) -> str:
         positive = [(key, float(value)) for key, value in weights.items() if float(value) > 0]
@@ -91,14 +111,12 @@ class MapGenerator:
             for node in current:
                 max_choices = min(max_out, len(nxt))
                 count = rng.randint(1, max_choices)
-                # 画面上で近いノードを優先しつつ少しランダムにする
                 candidates = sorted(nxt, key=lambda n: abs(n.x - node.x))[: max(2, max_choices)]
                 selected = rng.sample(candidates, k=min(count, len(candidates)))
                 node.connected_to = sorted({n.id for n in selected})
                 for selected_node in selected:
                     incoming[selected_node.id] += 1
 
-            # 次レイヤー側に孤立ノードが出たら近い前ノードから接続する
             for next_node in nxt:
                 if incoming[next_node.id] == 0:
                     previous = min(current, key=lambda n: abs(n.x - next_node.x))

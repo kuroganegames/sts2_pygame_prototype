@@ -1,0 +1,8 @@
+schema_version: 1
+id: difficulty_07
+level: 7
+name: 枯渇
+description: レア及びアップグレード済みカードの出現率が下がる。
+effects:
+  - type: card_reward_depletion
+    enabled: true

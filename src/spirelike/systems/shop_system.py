@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import RunState
 from spirelike.systems.card_reward_rarity_system import CardRewardContext, CardRewardRaritySystem, reward_choice_card_id
+from spirelike.systems.difficulty_system import DifficultySystem
 from spirelike.systems.potion_system import PotionSystem
 from spirelike.systems.unlock_system import UnlockSystem
 
@@ -30,6 +31,15 @@ class ShopSystem:
         self.card_rewards = CardRewardRaritySystem(registry)
         self.potions = PotionSystem(registry)
         self.unlocks = UnlockSystem(registry)
+        self.difficulty = DifficultySystem(registry)
+
+    def card_remove_cost(self, run_state: RunState) -> int:
+        removes = int(run_state.flags.get("shop_card_removes", 0))
+        config = self.difficulty.card_remove_cost_config(run_state)
+        return int(config.get("base", 75)) + removes * int(config.get("step", 25))
+
+    def record_card_removed(self, run_state: RunState) -> None:
+        run_state.flags["shop_card_removes"] = int(run_state.flags.get("shop_card_removes", 0)) + 1
 
     def generate_card_offers(self, run_state: RunState, rng: random.Random, count: int = 5) -> list[ShopOffer]:
         choices = self.card_rewards.card_choices(

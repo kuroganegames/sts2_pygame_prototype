@@ -39,7 +39,7 @@ def create_run(
         potion_slots=potion_slots,
         potions=[None for _ in range(potion_slots)],
     )
-    map_state = MapGenerator(registry).generate("act1", rng.map)
+    map_state = MapGenerator(registry).generate("act1", rng.map, run_config=config_dict)
     run = RunState(
         seed=seed,
         character_id=character_id,

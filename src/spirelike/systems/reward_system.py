@@ -13,6 +13,7 @@ from spirelike.systems.card_reward_rarity_system import (
     RewardCardChoice,
     normalize_reward_card_choice,
 )
+from spirelike.systems.difficulty_system import DifficultySystem
 from spirelike.systems.potion_drop_system import PotionDropSystem
 from spirelike.systems.potion_system import PotionSystem
 from spirelike.systems.unlock_system import UnlockSystem
@@ -37,6 +38,7 @@ class RewardSystem:
         self.unlocks = UnlockSystem(registry)
         self.card_rewards = CardRewardRaritySystem(registry)
         self.potion_drops = PotionDropSystem()
+        self.difficulty = DifficultySystem(registry)
 
     def combat_reward(self, run_state: RunState, node_type: str, rng: random.Random) -> RewardBundle:
         if node_type == "elite":
@@ -54,6 +56,7 @@ class RewardSystem:
             relic = None
             title = "戦闘報酬"
             source = "monster"
+        gold = self.apply_gold_multiplier(run_state, gold, "combat")
         cards = self.card_choices(run_state, rng, choices=3, source=source, force_rare=(source == "boss"))
         potion = None
         drop_result = self.potion_drops.roll_drop(
@@ -75,9 +78,13 @@ class RewardSystem:
 
     def treasure_reward(self, run_state: RunState, rng: random.Random) -> RewardBundle:
         relic = self.random_relic(run_state, rng, allow_boss=False)
-        gold = rng.randint(20, 45)
+        gold = self.apply_gold_multiplier(run_state, rng.randint(20, 45), "treasure")
         potion = self.potions.random_potion(rng, run_state=run_state) if self.potions.has_empty_slot(run_state) else None
         return RewardBundle(title="宝箱", gold=gold, relic_id=relic, potion_id=potion, message="宝箱から報酬を得た。")
+
+    def apply_gold_multiplier(self, run_state: RunState, amount: int, source: str) -> int:
+        multiplier = self.difficulty.gold_reward_multiplier(run_state, source)
+        return max(0, int(amount * multiplier))
 
     def card_choices(
         self,
