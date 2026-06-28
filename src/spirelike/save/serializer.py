@@ -244,6 +244,7 @@ def reward_bundle_to_dict(reward: RewardBundle | None) -> dict[str, Any] | None:
         "potion_id": reward.potion_id,
         "message": reward.message,
         "base_applied": bool(getattr(reward, "base_applied", False)),
+        "potion_drop": dict(getattr(reward, "potion_drop", {}) or {}),
     }
 
 
@@ -258,4 +259,5 @@ def reward_bundle_from_dict(data: dict[str, Any] | None) -> RewardBundle | None:
         potion_id=data.get("potion_id"),
         message=str(data.get("message", "")),
         base_applied=bool(data.get("base_applied", False)),
+        potion_drop=dict(data.get("potion_drop", {}) or {}),
     )
