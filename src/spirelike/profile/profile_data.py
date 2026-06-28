@@ -42,6 +42,10 @@ def default_unlocks() -> dict[str, dict[str, Any]]:
     }
 
 
+def default_achievements() -> dict[str, dict[str, Any]]:
+    return {}
+
+
 @dataclass
 class ProfileState:
     schema_version: int = CURRENT_PROFILE_SCHEMA_VERSION
@@ -55,6 +59,8 @@ class ProfileState:
     compendium: dict[str, dict[str, Any]] = field(default_factory=default_compendium)
     timeline: dict[str, Any] = field(default_factory=lambda: {"unlocked_fragments": []})
     unlocks: dict[str, dict[str, Any]] = field(default_factory=default_unlocks)
+    achievements: dict[str, dict[str, Any]] = field(default_factory=default_achievements)
+    notifications: list[dict[str, Any]] = field(default_factory=list)
 
     def ensure_defaults(self) -> None:
         base_summary = default_summary()
@@ -66,4 +72,8 @@ class ProfileState:
         base_unlocks = default_unlocks()
         for key, value in base_unlocks.items():
             self.unlocks.setdefault(key, value)
+        if not isinstance(self.achievements, dict):
+            self.achievements = {}
+        if not isinstance(self.notifications, list):
+            self.notifications = []
         self.timeline.setdefault("unlocked_fragments", [])

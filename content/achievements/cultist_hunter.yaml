@@ -1,0 +1,12 @@
+schema_version: 1
+id: cultist_hunter
+name: 信徒狩り
+category: bestiary
+description: Cultistを3体倒す。
+locked_description: Cultistを複数体倒す。
+hidden_until_unlocked: false
+profile_eligible_required: true
+conditions:
+  - type: enemy_defeated_count_at_least
+    enemy: cultist
+    amount: 3

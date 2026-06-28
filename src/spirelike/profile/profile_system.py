@@ -10,9 +10,12 @@ from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import RunState
 from spirelike.profile.profile_data import ProfileState, CURRENT_PROFILE_SCHEMA_VERSION
 from spirelike.profile.profile_serializer import profile_from_dict, profile_to_dict
+from spirelike.profile.progression_result import ProgressionResult
 from spirelike.profile.run_metrics import RunMetricsSystem, now_iso
 from spirelike.profile.timeline_conditions import condition_met
+from spirelike.systems.achievement_system import AchievementSystem
 from spirelike.systems.difficulty_system import DifficultySystem
+from spirelike.systems.notification_system import NotificationSystem
 from spirelike.systems.unlock_system import UnlockSystem
 
 
@@ -21,6 +24,8 @@ class ProfileSystem:
         self.project_root = project_root
         self.registry = registry
         self.unlock_system = UnlockSystem(registry)
+        self.achievement_system = AchievementSystem(registry)
+        self.notification_system = NotificationSystem()
         self.profile_path = project_root / "saves" / "profile.json"
         self.profile = self.load_or_create()
 
@@ -70,26 +75,106 @@ class ProfileSystem:
         run_state.flags["profile_run_started_recorded"] = True
         self.save()
 
-    def finalize_run(self, run_state: RunState, result: str) -> None:
+    def finalize_run(self, run_state: RunState, result: str) -> ProgressionResult:
+        progression = ProgressionResult()
         metrics = RunMetricsSystem.ensure(run_state)
         run_id = metrics.get("run_id")
         if any(record.get("run_id") == run_id for record in self.profile.run_history):
-            return
+            return progression
         record = self.build_run_record(run_state, result, metrics)
         self.profile.run_history.insert(0, record)
         self.profile.run_history = self.profile.run_history[:100]
-        if self.run_profile_eligible(run_state):
+        eligible = self.run_profile_eligible(run_state)
+        if eligible:
             self.apply_metrics_to_profile(run_state, result, metrics)
-            self.update_difficulty_progression(run_state, result)
-            new_fragments = self.update_timeline_unlocks()
-            for fragment_id in new_fragments:
-                title = self.registry.timeline_fragment(fragment_id).get("title", fragment_id)
-                run_state.add_message(f"Timeline解放: {title}")
+
+            progression.new_difficulty_unlocks = self.update_difficulty_progression(run_state, result)
+            for item in progression.new_difficulty_unlocks:
+                self._notify(
+                    progression,
+                    notification_id=f"difficulty:{item.get('character_id')}:{item.get('difficulty_level')}",
+                    notification_type="difficulty_unlocked",
+                    title=item.get("title", "Difficulty解放"),
+                    message=item.get("message", ""),
+                    payload=item,
+                )
+
+            new_fragment_ids = self.update_timeline_unlocks()
+            for fragment_id in new_fragment_ids:
+                fragment = self.registry.timeline_fragment(fragment_id)
+                item = {
+                    "fragment_id": fragment_id,
+                    "title": fragment.get("title", fragment_id),
+                    "description": fragment.get("description", ""),
+                }
+                progression.new_timeline_fragments.append(item)
+                run_state.add_message(f"Timeline解放: {item['title']}")
+                self._notify(
+                    progression,
+                    notification_id=f"timeline:{fragment_id}",
+                    notification_type="timeline_unlocked",
+                    title=f"Timeline解放: {item['title']}",
+                    message=item["description"],
+                    payload=item,
+                )
+
             new_unlocks = self.unlock_system.evaluate_unlocks(self.profile)
+            progression.new_content_unlocks = list(new_unlocks)
             for rule in new_unlocks:
                 name = rule.get("name") or f"{rule.get('target_type')}:{rule.get('target_id')}"
                 run_state.add_message(f"Unlock: {name}")
+                self._notify(
+                    progression,
+                    notification_id=f"unlock:{rule.get('target_type')}:{rule.get('target_id')}",
+                    notification_type="content_unlocked",
+                    title=f"解放: {name}",
+                    message=rule.get("description", ""),
+                    payload={
+                        "rule_id": rule.get("id"),
+                        "target_type": rule.get("target_type"),
+                        "target_id": rule.get("target_id"),
+                    },
+                )
+
+            new_achievements = self.achievement_system.evaluate_achievements(
+                self.profile,
+                profile_eligible=eligible,
+            )
+            progression.new_achievements = list(new_achievements)
+            for achievement in new_achievements:
+                name = achievement.get("name", achievement.get("id"))
+                run_state.add_message(f"実績解除: {name}")
+                self._notify(
+                    progression,
+                    notification_id=f"achievement:{achievement.get('id')}",
+                    notification_type="achievement_unlocked",
+                    title=f"実績解除: {name}",
+                    message=achievement.get("description", ""),
+                    payload={"achievement_id": achievement.get("id")},
+                )
         self.save()
+        return progression
+
+    def _notify(
+        self,
+        progression: ProgressionResult,
+        *,
+        notification_id: str,
+        notification_type: str,
+        title: str,
+        message: str,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        notification = self.notification_system.add_notification(
+            self.profile,
+            notification_id=notification_id,
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            payload=payload,
+        )
+        if notification is not None:
+            progression.notifications.append(notification)
 
     def build_run_record(self, run_state: RunState, result: str, metrics: dict[str, Any]) -> dict[str, Any]:
         player = run_state.player
@@ -154,9 +239,9 @@ class ProfileSystem:
         self._apply_bestiary(metrics)
         self._apply_compendium(metrics)
 
-    def update_difficulty_progression(self, run_state: RunState, result: str) -> None:
+    def update_difficulty_progression(self, run_state: RunState, result: str) -> list[dict[str, Any]]:
         if result != "victory" or not self.run_profile_eligible(run_state):
-            return
+            return []
         config = run_state.flags.get("run_config", {}) or {}
         level = int(config.get("difficulty_level", 0))
         char_stats = self._character_stats(run_state.character_id)
@@ -169,7 +254,17 @@ class ProfileSystem:
         if level >= unlocked and unlocked < max_defined:
             next_level = min(max_defined, level + 1)
             char_stats["highest_difficulty_unlocked"] = next_level
-            run_state.add_message(f"Difficulty {next_level} 解放")
+            title = f"Difficulty {next_level} 解放"
+            run_state.add_message(title)
+            return [
+                {
+                    "character_id": run_state.character_id,
+                    "difficulty_level": next_level,
+                    "title": title,
+                    "message": f"{run_state.character_id}でDifficulty {next_level}を選択可能になりました。",
+                }
+            ]
+        return []
 
     def _character_stats(self, character_id: str) -> dict[str, Any]:
         stats = self.profile.characters.setdefault(
