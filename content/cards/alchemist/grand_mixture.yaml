@@ -1,0 +1,33 @@
+schema_version: 1
+id: grand_mixture
+name: 大調合
+image: ../wanderer/strike.png
+character: alchemist
+type: skill
+rarity: rare
+cost: 2
+target: none
+keywords:
+  - exhaust
+description: 敵全体に毒5と弱体2を与える。廃棄。
+effects:
+  - type: apply_status
+    target: all_enemies
+    status: poison
+    stacks: 5
+  - type: apply_status
+    target: all_enemies
+    status: weak
+    stacks: 2
+upgrade:
+  name: 大調合+
+  description: 敵全体に毒7と弱体2を与える。廃棄。
+  effects:
+    - type: apply_status
+      target: all_enemies
+      status: poison
+      stacks: 7
+    - type: apply_status
+      target: all_enemies
+      status: weak
+      stacks: 2

@@ -1,0 +1,25 @@
+schema_version: 1
+id: quick_brew
+name: 即席調合
+image: ../wanderer/strike.png
+character: alchemist
+type: skill
+rarity: basic
+cost: 1
+target: none
+description: 3ブロック。カードを1枚引く。
+effects:
+  - type: gain_block
+    target: self
+    amount: 3
+  - type: draw_cards
+    amount: 1
+upgrade:
+  name: 即席調合+
+  description: 5ブロック。カードを1枚引く。
+  effects:
+    - type: gain_block
+      target: self
+      amount: 5
+    - type: draw_cards
+      amount: 1

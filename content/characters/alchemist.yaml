@@ -1,0 +1,30 @@
+schema_version: 1
+id: alchemist
+name: 錬金術師
+image: wanderer.png
+max_hp: 64
+starting_hp: 64
+starting_gold: 99
+base_energy: 3
+starting_potion_slots: 4
+starting_deck:
+  - alchemist_strike
+  - alchemist_strike
+  - alchemist_strike
+  - alchemist_strike
+  - alchemist_guard
+  - alchemist_guard
+  - alchemist_guard
+  - alchemist_guard
+  - vial_toss
+  - quick_brew
+starting_relics:
+  - experimental_kit
+card_pools:
+  character: alchemist
+  neutral: true
+tags:
+  - unlockable
+  - poison
+  - potions
+description: 毒、試薬、ポーションを駆使して戦う研究者。

@@ -1,0 +1,12 @@
+schema_version: 1
+id: alchemist_victory
+name: 錬金術の証明
+category: character
+description: 錬金術師で勝利する。
+locked_description: 錬金術師でランを勝利する。
+hidden_until_unlocked: false
+profile_eligible_required: true
+conditions:
+  - type: character_victories_at_least
+    character: alchemist
+    amount: 1

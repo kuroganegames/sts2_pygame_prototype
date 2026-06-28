@@ -16,6 +16,7 @@ from spirelike.systems.actions import (
 )
 from spirelike.systems.card_operation_system import CardOperationSystem
 from spirelike.systems.card_selection_system import CardSelectionSystem
+from spirelike.systems.potion_system import PotionSystem
 
 
 SELECTION_EFFECTS = {
@@ -73,6 +74,10 @@ class EffectExecutor:
             self._add_card_to_pile(effect, context, "draw")
         elif effect_type == "add_card_to_hand":
             self._add_card_to_pile(effect, context, "hand")
+        elif effect_type == "gain_potion":
+            self._gain_potion(effect)
+        elif effect_type == "gain_random_potion":
+            self._gain_random_potion(effect)
         elif effect_type in SELECTION_EFFECTS:
             self._selection_operation(effect, context, SELECTION_EFFECTS[effect_type], remaining_effects or [])
         elif effect_type == "repeat":
@@ -204,6 +209,20 @@ class EffectExecutor:
         amount = self.resolve_amount(effect.get("amount", 1), context)
         self.combat.enqueue_action(AddCardToPileAction(card_id=card_id, amount=amount, pile=pile))
 
+    def _gain_potion(self, effect: dict[str, Any]) -> None:
+        potion_id = str(effect.get("potion", ""))
+        if not potion_id:
+            self.combat.log("ポーションIDがありません")
+            return
+        PotionSystem(self.combat.registry).grant_potion(self.combat.run_state, potion_id)
+
+    def _gain_random_potion(self, effect: dict[str, Any]) -> None:
+        PotionSystem(self.combat.registry).grant_random_potion(
+            self.combat.run_state,
+            self.combat.rng,
+            rarity_weights=effect.get("rarity_weights"),
+        )
+
     def resolve_targets(self, target_spec: str, context: dict[str, Any]) -> list[Any]:
         player = self.combat.state.run_state.player
         if target_spec in {"self", "source"}:
@@ -260,23 +279,20 @@ class EffectExecutor:
                 return int(context.get("spent_energy", 0))
         return 0
 
-    def _amount_target(self, spec: dict[str, Any], context: dict[str, Any]):
-        target_key = spec.get("target", "self")
-        if target_key == "selected_enemy":
-            return context.get("target")
-        if target_key == "player":
-            return self.combat.state.run_state.player
-        return context.get("source")
+    def _amount_target(self, value: dict[str, Any], context: dict[str, Any]):
+        target_spec = value.get("target", "target")
+        targets = self.resolve_targets(target_spec, context)
+        return targets[0] if targets else context.get("target")
 
     def _check_condition(self, condition: dict[str, Any], context: dict[str, Any]) -> bool:
         condition_type = condition.get("type")
         if condition_type == "target_has_status":
-            targets = self.resolve_targets(condition.get("target", "selected_enemy"), context)
-            status = condition.get("status")
-            required = int(condition.get("stacks_at_least", 1))
-            return any(getattr(target, "statuses", {}).get(status, 0) >= required for target in targets)
-        if condition_type == "player_hp_below_percent":
-            player = self.combat.state.run_state.player
-            percent = float(condition.get("percent", 50))
-            return player.hp <= player.max_hp * percent / 100
+            target = context.get("target")
+            return int(getattr(target, "statuses", {}).get(condition.get("status"), 0)) >= int(condition.get("stacks", 1))
+        if condition_type == "source_has_status":
+            source = context.get("source")
+            return int(getattr(source, "statuses", {}).get(condition.get("status"), 0)) >= int(condition.get("stacks", 1))
+        if condition_type == "card_upgraded":
+            card = context.get("card")
+            return bool(getattr(card, "upgraded", False))
         return False
