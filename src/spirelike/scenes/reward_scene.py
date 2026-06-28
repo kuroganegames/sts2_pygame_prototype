@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import pygame
 
+from spirelike.models.entities import CardInstance
 from spirelike.scenes.base_scene import BaseScene
+from spirelike.systems.card_reward_rarity_system import normalize_reward_card_choice
 from spirelike.systems.reward_system import RewardBundle, RewardSystem
 from spirelike.ui import colors
 from spirelike.ui.buttons import Button
@@ -21,7 +23,7 @@ class RewardScene(BaseScene):
         self.after_boss = bool(payload.get("after_boss", False))
         self.reward_system = RewardSystem(app.registry)
         self.reward_system.apply_base_reward(self.run_state, self.reward)
-        self.card_rects: dict[str, pygame.Rect] = {}
+        self.card_rects: dict[int, pygame.Rect] = {}
         self.buttons = [Button((550, 620, 180, 52), "スキップ/進む", self.finish)]
 
     def finish(self) -> None:
@@ -34,9 +36,10 @@ class RewardScene(BaseScene):
     def handle_event(self, event) -> None:
         super().handle_event(event)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for card_id, rect in self.card_rects.items():
+            for index, rect in self.card_rects.items():
                 if rect.collidepoint(event.pos):
-                    self.reward_system.choose_card(self.run_state, card_id)
+                    if 0 <= index < len(self.reward.card_choices):
+                        self.reward_system.choose_card(self.run_state, self.reward.card_choices[index])
                     self.reward.card_choices.clear()
                     self.finish()
                     return
@@ -79,10 +82,15 @@ class RewardScene(BaseScene):
             total_w = len(choices) * (card_w + 24) - 24
             start_x = (1280 - total_w) // 2
             mouse = pygame.mouse.get_pos()
-            for i, card_id in enumerate(choices):
+            for i, choice in enumerate(choices):
+                normalized = normalize_reward_card_choice(choice)
                 rect = pygame.Rect(start_x + i * (card_w + 24), 330, card_w, card_h)
-                self.card_rects[card_id] = rect
-                view = CardView(self.app.registry, rect, card_id)
+                self.card_rects[i] = rect
+                view = CardView(
+                    self.app.registry,
+                    rect,
+                    CardInstance(card_id=normalized.card_id, upgraded=normalized.upgraded),
+                )
                 view.handle_motion(mouse)
                 view.draw(surface)
         for button in self.buttons:
