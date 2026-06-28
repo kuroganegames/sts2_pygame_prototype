@@ -1,0 +1,15 @@
+schema_version: 1
+id: unlock_cultist_charm
+target_type: relic
+target_id: cultist_charm
+initially_unlocked: false
+hidden_until_unlocked: false
+name: 信徒の護符
+description: Cultistを3体倒すと解放されるレリック。
+category: relic
+tier: 2
+order: 10
+conditions:
+  - type: enemy_defeated_count_at_least
+    enemy: cultist
+    amount: 3

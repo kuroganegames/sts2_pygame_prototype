@@ -29,9 +29,15 @@ python main.py
 - キャラクター選択時のDifficulty Level選択
 - キャラクター別Difficulty進行 / 勝利時の次段階解放
 - Unlock YAMLによるコンテンツ解放制御
+- Unlock Tree画面での解放条件 / 進捗表示
 - Achievement YAMLによる実績解除
 - Difficulty / Timeline / Unlock / Achievementの通知保存
 - RunResultでの新規解放表示
+- 小規模Content Pack 01
+  - 追加カード
+  - 追加レリック
+  - 追加ポーション
+  - 追加Run Modifier
 - ラン開始時のエンシェント祝福選択
 - YAMLからコンテンツ読み込み
 - YAMLからマップランダム生成

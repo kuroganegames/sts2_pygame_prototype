@@ -6,6 +6,9 @@ initially_unlocked: false
 hidden_until_unlocked: false
 name: 強敵Modifier解放
 description: 通常ランで1回勝利すると、Run Modifier「強敵」が使用可能になる。
+category: run_modifier
+tier: 1
+order: 10
 conditions:
   - type: victories_at_least
     amount: 1

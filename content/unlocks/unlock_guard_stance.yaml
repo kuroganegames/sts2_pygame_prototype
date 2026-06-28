@@ -1,0 +1,15 @@
+schema_version: 1
+id: unlock_guard_stance
+target_type: card
+target_id: guard_stance
+initially_unlocked: false
+hidden_until_unlocked: false
+name: 守勢
+description: WandererでDifficulty 1を勝利すると解放される。
+category: card
+tier: 2
+order: 10
+conditions:
+  - type: character_difficulty_unlocked_at_least
+    character: wanderer
+    level: 2

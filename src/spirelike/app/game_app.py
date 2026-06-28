@@ -28,6 +28,7 @@ from spirelike.scenes.compendium_scene import CompendiumScene
 from spirelike.scenes.timeline_scene import TimelineScene
 from spirelike.scenes.achievement_scene import AchievementScene
 from spirelike.scenes.notification_scene import NotificationScene
+from spirelike.scenes.unlock_tree_scene import UnlockTreeScene
 from spirelike.scenes.run_result_scene import RunResultScene
 from spirelike.systems.notification_system import NotificationSystem
 from spirelike.systems.unlock_system import UnlockSystem
@@ -83,6 +84,7 @@ class GameApp:
         self.scene_manager.register("timeline", lambda app, payload: TimelineScene(app, payload))
         self.scene_manager.register("achievements", lambda app, payload: AchievementScene(app, payload))
         self.scene_manager.register("notifications", lambda app, payload: NotificationScene(app, payload))
+        self.scene_manager.register("unlock_tree", lambda app, payload: UnlockTreeScene(app, payload))
         self.scene_manager.register("run_result", lambda app, payload: RunResultScene(app, payload))
 
     def autosave_if_possible(self, scene_name: str, payload: dict[str, Any]) -> None:

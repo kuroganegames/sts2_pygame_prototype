@@ -1,0 +1,15 @@
+schema_version: 1
+id: unlock_venom_tip
+target_type: card
+target_id: venom_tip
+initially_unlocked: false
+hidden_until_unlocked: false
+name: 毒塗り
+description: Cultistを3体倒すと解放される。
+category: card
+tier: 2
+order: 20
+conditions:
+  - type: enemy_defeated_count_at_least
+    enemy: cultist
+    amount: 3

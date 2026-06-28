@@ -15,12 +15,13 @@ class ProfileScene(BaseScene):
         unread = NotificationSystem().unread_count(self.profile)
         notification_label = f"通知 ({unread})" if unread else "通知"
         self.buttons = [
-            Button((410, 395, 220, 44), "ラン履歴", lambda: app.scene_manager.change("run_history")),
-            Button((650, 395, 220, 44), "敵図鑑", lambda: app.scene_manager.change("bestiary")),
-            Button((410, 452, 220, 44), "コレクション", lambda: app.scene_manager.change("compendium")),
-            Button((650, 452, 220, 44), "Timeline", lambda: app.scene_manager.change("timeline")),
-            Button((410, 509, 220, 44), "実績", lambda: app.scene_manager.change("achievements")),
-            Button((650, 509, 220, 44), notification_label, lambda: app.scene_manager.change("notifications")),
+            Button((380, 390, 210, 42), "ラン履歴", lambda: app.scene_manager.change("run_history")),
+            Button((610, 390, 210, 42), "敵図鑑", lambda: app.scene_manager.change("bestiary")),
+            Button((380, 442, 210, 42), "コレクション", lambda: app.scene_manager.change("compendium")),
+            Button((610, 442, 210, 42), "Timeline", lambda: app.scene_manager.change("timeline")),
+            Button((380, 494, 210, 42), "実績", lambda: app.scene_manager.change("achievements")),
+            Button((610, 494, 210, 42), notification_label, lambda: app.scene_manager.change("notifications")),
+            Button((495, 546, 210, 42), "解放ツリー", lambda: app.scene_manager.change("unlock_tree")),
             Button((30, 30, 130, 44), "戻る", lambda: app.scene_manager.change("title")),
         ]
 

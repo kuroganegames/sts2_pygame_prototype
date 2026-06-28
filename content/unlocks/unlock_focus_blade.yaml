@@ -1,0 +1,14 @@
+schema_version: 1
+id: unlock_focus_blade
+target_type: card
+target_id: focus_blade
+initially_unlocked: false
+hidden_until_unlocked: false
+name: 集中の刃
+description: 通常ランで1回勝利すると、カード「集中の刃」が報酬に出現する。
+category: card
+tier: 1
+order: 10
+conditions:
+  - type: victories_at_least
+    amount: 1

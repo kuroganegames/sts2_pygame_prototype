@@ -1,35 +1,23 @@
 schema_version: 1
 id: guard_stance
-name: 防御の構え
-image: guard.png
+name: 守勢
+image: strike.png
 character: wanderer
-type: power
+type: skill
 rarity: uncommon
 cost: 1
-target: self
-description: この戦闘中、攻撃カードを使うたびに2ブロックを得る。
-effects: []
-power:
-  id: guard_stance
-  stacking: stack
-  initial_stacks: 1
-  triggers:
-    - event: card_played
-      when:
-        card_type: attack
-      effects:
-        - type: gain_block
-          target: self
-          amount: 2
+target: none
+keywords:
+  - retain
+description: 8ブロック。Retain。
+effects:
+  - type: gain_block
+    target: self
+    amount: 8
 upgrade:
-  name: 防御の構え+
-  description: この戦闘中、攻撃カードを使うたびに3ブロックを得る。
-  power:
-    triggers:
-      - event: card_played
-        when:
-          card_type: attack
-        effects:
-          - type: gain_block
-            target: self
-            amount: 3
+  name: 守勢+
+  description: 11ブロック。Retain。
+  effects:
+    - type: gain_block
+      target: self
+      amount: 11

@@ -1,0 +1,13 @@
+schema_version: 1
+id: steady_gear
+name: 安定歯車
+image: iron_leaf.png
+rarity: common
+unique: true
+description: 戦闘開始時、ブロックを3得る。
+triggers:
+  - event: combat_start
+    effects:
+      - type: gain_block
+        target: self
+        amount: 3
