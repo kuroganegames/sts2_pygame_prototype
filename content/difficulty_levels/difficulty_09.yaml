@@ -1,0 +1,8 @@
+schema_version: 1
+id: difficulty_09
+level: 9
+name: 凶悪なる敵
+description: すべての敵の攻撃が激化する。
+effects:
+  - type: enemy_damage_multiplier
+    multiplier: 1.10

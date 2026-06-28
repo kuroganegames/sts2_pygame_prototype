@@ -1,0 +1,9 @@
+schema_version: 1
+id: difficulty_10
+level: 10
+name: ダブル・ボス
+description: 第3層の最後に戦うボスが2体になる。
+effects:
+  - type: double_boss
+    act: 3
+    count: 2

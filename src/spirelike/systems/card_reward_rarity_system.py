@@ -6,6 +6,7 @@ from typing import Any
 
 from spirelike.content.loader import ContentRegistry
 from spirelike.models.entities import RunState
+from spirelike.systems.difficulty_system import DifficultySystem
 from spirelike.systems.unlock_system import UnlockSystem
 
 RARE_BONUS_INITIAL = -5.0
@@ -89,8 +90,7 @@ class CardRewardRaritySystem:
         self.unlocks = UnlockSystem(registry)
 
     def depletion_enabled(self, run_state: RunState) -> bool:
-        config = run_state.flags.get("run_config", {}) or {}
-        return int(config.get("difficulty_level", 0)) >= 7
+        return DifficultySystem(self.registry).depletion_enabled(run_state)
 
     def current_rare_bonus(self, run_state: RunState) -> float:
         return float(run_state.flags.get("card_reward_rare_bonus", RARE_BONUS_INITIAL))

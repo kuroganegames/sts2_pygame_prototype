@@ -1,0 +1,9 @@
+schema_version: 1
+id: difficulty_06
+level: 6
+name: インフレ
+description: 商人でデッキからカードを削除する費用が増加する。
+effects:
+  - type: card_remove_cost
+    base: 100
+    step: 50

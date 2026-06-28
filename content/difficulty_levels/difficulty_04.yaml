@@ -1,8 +1,8 @@
 schema_version: 1
 id: difficulty_04
 level: 4
-name: 試練 IV
-description: 敵の最大HPがさらに10%増える。
+name: きつめのベルト
+description: ポーションスロットが1つ少ない状態で開始する。
 effects:
-  - type: enemy_hp_multiplier
-    multiplier: 1.10
+  - type: potion_slot_delta
+    amount: -1

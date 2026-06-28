@@ -1,0 +1,8 @@
+schema_version: 1
+id: difficulty_08
+level: 8
+name: 頑強なる敵
+description: すべての敵の耐久力が上昇する。
+effects:
+  - type: enemy_hp_multiplier
+    multiplier: 1.10

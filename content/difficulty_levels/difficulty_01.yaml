@@ -1,8 +1,9 @@
 schema_version: 1
 id: difficulty_01
 level: 1
-name: 試練 I
-description: 敵の最大HPが10%増える。
+name: エリートの群れ
+description: エリートの出現率が上昇する。
 effects:
-  - type: enemy_hp_multiplier
-    multiplier: 1.10
+  - type: map_weight_multiplier
+    node_type: elite
+    multiplier: 1.35
